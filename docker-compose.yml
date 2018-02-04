@@ -1,0 +1,21 @@
+# contains instructions to run the app locally
+version: "2"
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      # mounting each volume separately so as not to mask the fs in container
+      - "./views:/usr/src/app/views"
+      - "./public:/usr/src/app/public"
+      - "./routes:/usr/src/app/routes"
+      - "./app.js:/usr/src/app/app.js"
+      - "./ws-server.js:/usr/src/app/ws-server.js"
+      - "./botSpawner.js:/usr/src/app/botSpawner.js"
+    entrypoint:
+      - "npm"
+      - "run"
+      - "start"
+    environment:
+      - DEBUG=0

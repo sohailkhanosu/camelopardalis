@@ -1,0 +1,12 @@
+{% extends 'layout.twig' %}
+
+{% block body %}
+  <h1>{{title}}</h1>
+  <p>Welcome to {{title}}</p>
+  <h1>Websocket messages</h1>
+  <textarea id="ws-messages" disabled="true" cols="80" rows="40">
+  </textarea>
+{% endblock %}
+{% block scripts %}
+<script src='javascripts/index.js'></script>
+{% endblock %}

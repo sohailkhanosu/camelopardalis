@@ -1,0 +1,19 @@
+# editor stuff
+*.swp
+.idea/
+
+# python stuff
+build
+*.pyc
+*.egg
+venv
+
+# node stuff
+node_modules/
+
+# environment
+.env*
+.state-*
+
+# artifacts
+.DS_Store
