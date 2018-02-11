@@ -7,6 +7,9 @@ build
 *.pyc
 *.egg
 venv
+*.ini
+*.log
+__pycache__
 
 # node stuff
 node_modules/
