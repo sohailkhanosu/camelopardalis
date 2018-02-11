@@ -55,6 +55,14 @@ def main(args: List[str]) -> None:
         next(gen)
 
     while True:
+        try:
+            received_data = json.loads(input())
+        except Exception:
+            print(json.dumps({'type': 'error', 'data': 'unable to read value shutting down'}))
+            return 1
+
+        if received_data.get('type') == 'shutdown':
+            return 0
         print(json.dumps(next(generators[random.randint(0, 1)])), flush=True)
         time.sleep(random.random() * 5)     # sleep between 0 -5 seconds
 

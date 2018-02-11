@@ -20,6 +20,7 @@ function initBot(spawner, botDirectory, scriptPath) {
     var botInstance = {
         running: false,
         scriptPath: scriptPath,
+        botDir: botDirectory,
         fd: null
     };
     botInstance.fd = new PythonShell(scriptPath, options);
@@ -62,10 +63,27 @@ function BotSpawner(options) {
 
     this.stopBot = function(botId) {
         // stop the bot, send a signal to it or send EOF
+        if (Object.hasOwnProperty(this.spawnedChildren, botId)) {
+            this.spawnedChildren[botId].fd.send({'type': 'shutdown'});
+            // maybe listen here for a message of type shutdown-confirm that has
+            // the same botId
+            this.spawnedChilden[botId].running = false;
+        }
     }
 
     this.startBot = function(botId) {
         // start the bot, (if started, ignore)
+        if (Object.hasOwnProperty(this.spawnedChildren, botId)) {
+            // check to see if the process is not running and is terminated
+            // it could have been signaled for shutdown but not yet have exited
+            if (!this.spawnedChildren[botId].running && this.spawnedChildren[botId].fd.terminated) {
+                /* in this case, lets just delete the original instance and start a new one */
+                var script = this.spawnedChildren[botId].scriptPath;
+                var botDir = this.spawnedChildren[botId].botDir;
+                delete this.spawnedChildren[botId];
+                initBot(self, botDir, script);
+            }
+        }
     }
 
     this.restartBot = function(botId) {
