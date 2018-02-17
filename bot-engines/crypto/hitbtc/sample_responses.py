@@ -152,6 +152,16 @@ balance_res = """[
     "currency": "ETH",
     "available": "30.8504600",
     "reserved": "0.0000000"
+  },
+  {
+    "currency": "LTC",
+    "available": "42.89",
+    "reserved": "1.23000000"
+  },
+  {
+    "currency": "BTC",
+    "available": "1.8504600",
+    "reserved": "0.3450000"
   }
 ]"""
 

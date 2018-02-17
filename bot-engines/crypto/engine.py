@@ -1,12 +1,14 @@
 import configparser
 import abc
-from .helpers import str_to_class, serialize_obj
+from .helpers import str_to_class, serialize_obj, print_json
 import json
 import random
 from queue import Queue
 import time
 import threading
 import os
+import logging
+import signal
 
 
 class TradingBot(object):
@@ -26,41 +28,57 @@ class TradingBot(object):
         self.markets = {m.counter + '_' + m.base: m for m in list(map(self.exchange.to_market, self.exchange.symbols))}
         self.markets_on = {m: True for m in self.markets.keys()}
         self.msg_queue = Queue(maxsize=10)
+        self.on = True
+        self.work_thread = None
+        signal.signal(signal.SIGINT, self.sig_handler)
 
     def run(self):
-        bot_thread = threading.Thread(target=self.work)
-        bot_thread.daemon = True
-        bot_thread.start()
+        self.work_thread = threading.Thread(target=self.work)
+        self.work_thread.daemon = True
+        self.work_thread.start()
 
         while True:
             self.pull()
 
     def work(self):
         while True:
+            if not self.on:
+                logging.info("Cancelling trades")
+                self.exchange.cancel(all=True)
+                return
             try:
                 if not self.msg_queue.empty():
                     msg = self.msg_queue.get()
-                    for k,v in msg.items():
-                        self.markets_on[k] = (v == 'on')
+                    self.process_msg(msg)
                 new_orders = self.execute_strategy()
+                self.push(new_orders, "new_orders")
                 self.report()
-                time.sleep(5)
             except Exception as e:
                 self.push(e, 'error')
-                time.sleep(5)
-                # send error msg to backend, cancel orders if necessary
-                pass
+                logging.info("Cancelling orders")
+                self.exchange.cancel(all=True)
+                raise e
+            finally:
+                time.sleep(2)
+
+    def process_msg(self, msg):
+        if msg['type'] == 'markets':
+            for k, v in msg.items():
+                self.markets_on[k] = (v == 'on')
+        elif msg['type'] == 'pause':
+            for k, v in msg.items():
+                self.markets_on[k] = False
 
     def execute_strategy(self):
         new_orders = []
         for m in [market for market, is_on in self.markets_on.items() if is_on]:
             res = self.strategy.trade(self.markets[m])
             if res:
-                new_orders.append(res)
+                new_orders.extend(res)
         return new_orders
 
     def report(self):
-        # send data to backend via stdout
+        # send market data to backend via stdout
         balance = self.exchange.balance()
         self.push(balance, 'balance')
         active_orders = self.exchange.orders()
@@ -70,17 +88,25 @@ class TradingBot(object):
             'markets': self.markets_on
         }
         self.push(status, 'status')
+        orderbooks = {k: self.exchange.order_book(v) for k,v in self.markets.items()}
+        self.push(orderbooks, 'orderbooks')
+        trades = {k: self.exchange.trades(v) for k,v in self.markets.items()}
+        self.push(trades, 'trades')
 
     def pull(self):
-        # pull commands from backend via stdin e.g. {"ETH_BTC": "off"}
-        stream = input()
+        # pull commands from backend via stdin e.g. {"type": "markets", "data": {"ETH_BTC": "off"}}
+        stream = self.input_with_timeout(5)
         try:
             msg = json.loads(stream)
-            self.msg_queue.put(msg)
+            if msg['type'] == 'ping':  # if heartbeat, immediately reply
+                msg['type'] = 'pong'
+                print(json.dumps(msg))
+            else:
+                self.msg_queue.put(msg)
         except json.JSONDecodeError as e:
             self.push(e, "error")
 
-    def push(self, data, type):
+    def push(self, data, type='Test'):
         payload = {
             'exchange': self.name,
             'type': type,
@@ -88,6 +114,24 @@ class TradingBot(object):
             'nonce': ''.join([str(random.randint(0, 9)) for _ in range(10)])
         }
         print(json.dumps(payload, default=serialize_obj), flush=True)
+
+    def input_with_timeout(self, timeout):
+        # set signal handler
+        signal.signal(signal.SIGALRM, self.sig_handler)
+        signal.alarm(timeout)  # produce SIGALRM in `timeout` seconds
+        try:
+            return input()
+        finally:
+            signal.alarm(0)  # cancel alarm
+
+    def sig_handler(self, signum, frame):
+        if signum == signal.SIGALRM:
+            logging.info("Input timed out, turning off bot")
+        else:
+            logging.info("Received SIGINT, turning off bot")
+        self.on = False
+        self.work_thread.join()
+        raise SystemExit
 
 
 class Exchange(abc.ABC):
@@ -125,7 +169,7 @@ class Exchange(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def ticker(self):
+    def ticker(self, market=None):
         pass
 
     @abc.abstractmethod
@@ -150,13 +194,40 @@ class BasicStrategy(Strategy):
         return "Basic"
 
     def analyze_market(self, market):
-        data = self.exchange.order_book(market)
-        # do math
-        return None
+        ticker = self.exchange.ticker(market)
+        best_ask = ticker.ask
+        best_bid = ticker.bid
+        last = ticker.last
+        logging.info("best ask: {}".format(best_ask))
+        logging.info("best bid: {}".format(best_bid))
+        logging.info("last: {}".format(last))
+        market_value = (best_ask + best_bid) / 2
+        return market_value
 
     def trade(self, market):
-        math = self.analyze_market(market)
-        # make a decision/quote based on math
-        # res = self.exchange.bid(market=market, rate=0, quantity=0)
-        res = None
-        return res
+        self.exchange.cancel(all=True)  # cancel previous orders
+        spread = .004
+        market_value = self.analyze_market(market)
+        ask_quote = market_value + (spread / 2)
+        bid_quote = market_value - (spread / 2)
+
+        logging.info("market value: {}".format(market_value))
+        logging.info("ask quote: {}".format(ask_quote))
+        logging.info("bid quote: {}".format(bid_quote))
+
+        try:
+            new_orders = []
+            bid = self.exchange.bid(market=market, rate=bid_quote, quantity=.001)
+            ask = self.exchange.ask(market=market, rate=ask_quote, quantity=.001)
+            for order in [bid, ask]:
+                if order:
+                    new_orders.append(order)
+                    logging.info("Successfully placed {} order #{}".format(order.side, order.order_id))
+
+            return new_orders
+        except Exception as e:
+            logging.warning('Order failed: "{}"'.format(e))
+            self.exchange.cancel(all=True)
+            raise e
+
+

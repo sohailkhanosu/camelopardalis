@@ -31,12 +31,13 @@ class Trade(object):
 
 
 class Ticker(object):
-    def __init__(self, market, ask, bid,  low, high, base_volume, quote_volume, time):
+    def __init__(self, market, ask, bid,  low, high, last, base_volume, quote_volume, time):
         self.market = market
         self.ask = float(ask)
         self.bid = float(bid) if bid else None
         self.low = float(low)
         self.high = float(high)
+        self.last = float(last)
         self.base_volume = float(base_volume)
         self.quote_volume = float(quote_volume)
         self.time = time
