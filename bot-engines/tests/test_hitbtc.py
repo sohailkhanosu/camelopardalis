@@ -50,7 +50,7 @@ class TestAPISymbols(unittest.TestCase):
 
     def test_symbols_all(self):
         status, data = self.e._symbols()
-        # print_json(data)
+        print_json(data)
         check_params(self, data[0])
 
     def test_symbols_one_by_one(self):

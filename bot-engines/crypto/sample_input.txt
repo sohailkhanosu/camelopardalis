@@ -1,0 +1,20 @@
+// heartbeat
+{
+  "type": "ping",
+  "data": {
+    ...
+  }
+}
+
+// turn market(s) on or off
+{
+  "type": "markets",
+  "data": {
+      "ETH_BTC": "off",
+      "ETC_BTC": "on",
+      ...
+  }
+}
+
+// set all markets to "off"
+{"type": "pause"}

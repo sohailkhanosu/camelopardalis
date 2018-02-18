@@ -11,12 +11,12 @@ from crypto.helpers import print_json
 class HitBTCExchange(Exchange):
     def __init__(self, base_url, key, secret, symbols, mock=True):
         super().__init__(base_url, key, secret, symbols, mock)
-        logging.basicConfig(filename='hitbtc.log', level=logging.DEBUG)
+        logging.basicConfig(filename='hitbtc.log', level=logging.INFO)
         self.session = requests.session()
         if mock:
             self.session.mount('mock', mock_adapter)
         self.session.auth = (self.key, self.secret)
-        self.symbols = symbols
+        self.symbols = symbols if not mock else ['ETHBTC', 'LTCBTC', 'ETCBTC']
         self.markets = {}
         for s in self.symbols:
             self.markets[s] = self.to_market(s)
@@ -26,11 +26,15 @@ class HitBTCExchange(Exchange):
         status, data = self._order_create(market.symbol, side="buy", price=rate, quantity=quantity)
         if status == 200:
             return self._to_order(data)
+        else:
+            raise Exception(data['error']['message'])
 
     def ask(self, market, rate, quantity):
         status, data = self._order_create(market.symbol, side="sell", price=rate, quantity=quantity)
         if status == 200:
             return self._to_order(data)
+        else:
+            raise Exception(data['error']['message'])
 
     def cancel(self, order_id=None, market=None, all=False):
         if all:
@@ -46,6 +50,8 @@ class HitBTCExchange(Exchange):
             raise Exception('Specify order_id, market, or all')
         if status == 200:
             return orders
+        else:
+            raise Exception(data['error']['message'])
 
     def balance(self):
         status, data = self._trading_balance()
@@ -55,11 +61,13 @@ class HitBTCExchange(Exchange):
             raise Exception(data['error']['message'])
 
     def orders(self, market=None):
-        symbol = market if market else ''
+        symbol = market.symbol if market else ''
         status, data = self._orders_active(symbol)
         orders = list(map(self._to_order, data))
         if status == 200:
             return orders
+        else:
+            raise Exception(data['error']['message'])
 
     def order_book(self, market):
         status, data = self._orderbook(market.symbol)
@@ -68,18 +76,36 @@ class HitBTCExchange(Exchange):
         orderbook = OrderBook(asks, bids)
         if status == 200:
             return orderbook
+        else:
+            raise Exception(data['error']['message'])
 
-    def ticker(self):
-        status, data = self._tickers()
+    def ticker(self, market=None):
+        symbol = market.symbol if market else ''
+        status, data = self._tickers(symbol)
         if status == 200:
-            tickers = [self._to_ticker(d) for d in data]
-            return tickers
+            if market:
+                return self._to_ticker(data, market)
+            else:
+                tickers = [self._to_ticker(d) for d in data]
+                return tickers
+        else:
+            raise Exception(data['error']['message'])
 
     def market_trades(self, market):
         status, data = self._trades(market.symbol)
         trades = [self._to_trade(d, market) for d in data]
         if status == 200:
             return trades
+        else:
+            raise Exception(data['error']['message'])
+
+    def trades(self, market):
+        status, data = self._history_trades(market.symbol)
+        trades = [self._to_trade(d, market) for d in data]
+        if status == 200:
+            return trades
+        else:
+            raise Exception(data['error']['message'])
 
     # Data conversion
     def to_market(self, symbol):
@@ -89,8 +115,11 @@ class HitBTCExchange(Exchange):
                 counter, base = self._split_symbol(symbol)
             else:
                 status, data = self._symbols(symbol)
-                counter = data['quoteCurrency']
-                base = data['baseCurrency']
+                if status == 200:
+                    counter = data['quoteCurrency']
+                    base = data['baseCurrency']
+                else:
+                    raise Exception(data['error']['message'])
             m = Market(counter, base, symbol)
         return m
 
@@ -98,7 +127,9 @@ class HitBTCExchange(Exchange):
         return symbol[:len(symbol)//2], symbol[len(symbol)//2:]
 
     def _to_order(self, data):
-        market = self.markets[data['symbol']]
+        market = self.markets.get(data['symbol'], None)
+        if not market:
+            market = self.to_market(data['symbol'])
         created = dateutil.parser.parse(data['createdAt'])
         order = Order(order_id=data['clientOrderId'], market=market, side=data['side'],
                       rate=data['price'], quantity=data['cumQuantity'], time=created)
@@ -115,11 +146,10 @@ class HitBTCExchange(Exchange):
 
     def _to_ticker(self, data, market=None):
         if not market:
-            counter, base = self._split_symbol(data['symbol'])
-            market = Market(counter, base, data['symbol'])
+            market = self.to_market(data['symbol'])
         time = data['timestamp']
         ticker = Ticker(market=market, ask=data['ask'], bid=data['bid'], low=data['low'], high=data['high'],
-                        base_volume=data['volume'], quote_volume=data['volumeQuote'], time=time)
+                        last=data['last'], base_volume=data['volume'], quote_volume=data['volumeQuote'], time=time)
         return ticker
 
     # API Methods
@@ -188,6 +218,7 @@ class HitBTCExchange(Exchange):
         if not expireTime and payload.get('timeInForce', '') == 'GTD':
             raise Exception("expireTime required for GTD timeInForce")
         response = self.session.post(self.base_url + '/order', data=payload)
+
         return response.status_code, response.json()
 
     def _orders_cancel(self, symbol=None):
@@ -211,15 +242,16 @@ class HitBTCExchange(Exchange):
             if _from:
                 payload['from'] = payload['_from']
                 del payload['_from']
-        response = self.session.get(self.base_url + '/history/order', params=payload)
+        response = self.session.get(self.base_url + '/history/order', data=payload)
         return response.status_code, response.json()
 
     def _history_trades(self, symbol=None, sort=None, by=None, _from=None, till=None, limit=None, offset=None):
         payload = {k: v for (k, v) in locals().items() if v is not None and v != self}
+
         if _from:
             payload['from'] = payload['_from']
             del payload['_from']
-        response = self.session.get(self.base_url + '/history/trades', params=payload)
+        response = self.session.get(self.base_url + '/history/trades', data=payload)
         return response.status_code, response.json()
 
     def _history_trade(self, orderId):
