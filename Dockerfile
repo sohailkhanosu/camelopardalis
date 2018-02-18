@@ -14,6 +14,8 @@ RUN wget https://www.python.org/ftp/python/3.6.4/Python-3.6.4.tgz \
     && make \
     && make install
 
+RUN python3 -m ensurepip --upgrade
+
 
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
@@ -22,7 +24,10 @@ WORKDIR /usr/src/app
 COPY package.json /usr/src/app
 RUN npm install
 
+RUN mkdir -p bot-engines
+COPY bot-engines/requirements.txt /usr/src/app/bot-engines/requirements.txt
+RUN pip3 install -r /usr/src/app/bot-engines/requirements.txt
+
 COPY . /usr/src/app
 EXPOSE 3000
 CMD ["npm", "run", "start"]
-

@@ -100,12 +100,12 @@ class TradingBot(object):
 
     def pull(self):
         # pull commands from backend via stdin e.g. {"type": "markets", "data": {"ETH_BTC": "off"}}
-        stream = self.input_with_timeout(5)
+        stream = self.input_with_timeout(10)
         try:
             msg = json.loads(stream)
             if msg['type'] == 'ping':  # if heartbeat, immediately reply
                 msg['type'] = 'pong'
-                print(json.dumps(msg))
+                print(json.dumps(msg), flush=True)
             else:
                 self.msg_queue.put(msg)
         except json.JSONDecodeError as e:
