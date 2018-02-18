@@ -63,17 +63,17 @@ function BotSpawner(options) {
 
     this.stopBot = function(botId) {
         // stop the bot, send a signal to it or send EOF
-        if (Object.hasOwnProperty(this.spawnedChildren, botId)) {
+        if (this.spawnedChildren.hasOwnProperty(botId) && this.spawnedChildren[botId].running) {
             this.spawnedChildren[botId].fd.send({'type': 'shutdown'});
             // maybe listen here for a message of type shutdown-confirm that has
             // the same botId
-            this.spawnedChilden[botId].running = false;
+            this.spawnedChildren[botId].running = false;
         }
     }
 
     this.startBot = function(botId) {
         // start the bot, (if started, ignore)
-        if (Object.hasOwnProperty(this.spawnedChildren, botId)) {
+        if (this.spawnedChildren.hasOwnProperty(botId) && !this.spawnedChildren[botId].running) {
             // check to see if the process is not running and is terminated
             // it could have been signaled for shutdown but not yet have exited
             if (!this.spawnedChildren[botId].running && this.spawnedChildren[botId].fd.terminated) {
@@ -87,9 +87,10 @@ function BotSpawner(options) {
     }
 
     this.restartBot = function(botId) {
-        // restart the bot
         this.stopBot(botId);
-        this.startBot(botId);
+
+        /* start bot after a two second delay to ensure termination */
+        setTimeout(() => this.startBot(botId), 2000);
     }
 }
 
