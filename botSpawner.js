@@ -10,26 +10,72 @@ function getIdFromScriptPath(scriptPath) {
     return path.parse(scriptPath).name;
 }
 
+
+/* start a heartbeat check with the given botInstance at every intervalTime seconds */
+function startHeartBeat(botInstance, intervalTime) {
+    let counter = 1;
+    let intervals = [];
+    setTimeout(function checker() {
+        let currentCounter = counter;
+        let pongReceived = false;
+        if (botInstance.running) {
+            try {
+                botInstance.fd.send({type: 'ping', data: currentCounter});
+            } catch(err) {
+                console.log('catching..');
+                /* assume the worst, client closed connection */
+                botInstance.running = false;
+                return;
+            }
+            botInstance.fd.once('message', function pongListener(message) {
+                if (message.type === 'pong' && message.exchange === botInstance.id && message.data >= currentCounter) {
+                    console.log(message);
+                    pongReceived = true;
+                }
+            });
+
+            setTimeout(function () {
+               if (!pongReceived) {
+                   /* consider this bot dead */
+                   botInstance.running = false;
+               } else {
+                   /* got the pong, restart the checker */
+                   setTimeout(checker, intervalTime);
+               }
+            }, 5000);
+        }
+        counter += 1;
+    }, intervalTime)
+}
+
+/* initialize the bot script to run */
 function initBot(spawner, botDirectory, scriptPath) {
-    var options = {
+    let options = {
         mode: 'json',
         pythonPath: config.pythonPath,
         scriptPath: botDirectory
     }
 
-    var botInstance = {
+    let botInstance = {
         running: false,
         scriptPath: scriptPath,
         botDir: botDirectory,
-        fd: null
+        fd: null,
+        id: getIdFromScriptPath(scriptPath)
     };
     botInstance.fd = new PythonShell(scriptPath, options);
     botInstance.fd.on('message', function (message) {
-        spawner.emit('message', message);
+        /* do not propagate private types such as ping/pong */
+        if (message.type !== 'pong')
+            spawner.emit('message', message);
     });
     botInstance.running = true;
-    spawner.spawnedChildren[getIdFromScriptPath(scriptPath)] = botInstance;
+    spawner.spawnedChildren[botInstance.id] = botInstance;
+
+    /* start the heartbeat to ensure continuous connection */
+    startHeartBeat(botInstance, spawner.heartBeatInterval);
 }
+
 
 /**
  * given a set of options, if any, configures/runs the bots in the specified
@@ -52,6 +98,7 @@ function BotSpawner(options) {
     const self = this;
     let botDir = options.botDir || config.botDir;
     this.spawnedChildren = {};  // Object[Text, Object]
+    this.heartBeatInterval = options.heartBeatInterval || 2000; // by default, wait two seconds to send heartbeat
 
     fs.readdir(botDir, function(err, files) {
         files
