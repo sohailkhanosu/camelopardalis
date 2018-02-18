@@ -3,22 +3,32 @@ import random
 import json
 import datetime
 import time
+from uuid import uuid4
 
 from typing import List
 
+def trade_id_generator():
+    counter = 1
+    while True:
+        yield counter
+        counter += 1
 
 def trades_generator():
+    tid_generator = trade_id_generator()
+    next(tid_generator)
     while True:
         yield {
             'type': 'trades',
             'exchange': 'exmo',
             'data': {
                 'trades': [
-                    {'type': 'sell' if random.random() > 0.5 else 'buy',
+                    {'side': 'sell' if random.random() > 0.5 else 'buy',
                      'market': 'ETH_BTC' if random.random() > 0.5 else 'BCC_BTC',
-                     'amount': random.random(),
+                     'quantity': random.random(),
                      'rate': 1000 * random.random(),
-                     'date': datetime.datetime.now().isoformat()
+                     'time': time.time(),
+                     'order_id': uuid4().hex,
+                     'trade_id': next(tid_generator)
                     }
                     for _ in range(random.randint(1, 10))
                 ]
@@ -29,7 +39,7 @@ def trades_generator():
 def get_balance(total=100):
     percentage_free = random.random() * 0.5
     available = total * percentage_free
-    return {'available': available, 'locked': total - available, 'total': total}
+    return {'available': available, 'reserved': total - available}
 
 
 def balances_generator():
