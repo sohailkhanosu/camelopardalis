@@ -7,23 +7,27 @@ class ExchangeCollectionDAO {
 
     addExchange(exchangeId) {
         /* add the exchange to the list of supported exchanges */
-        this.store[exchangeId] = {};
+        if (! this.store.hasOwnProperty(exchangeId))
+            this.store[exchangeId] = {};
     }
 
-    updateState(newState) {
-       /* diff the given state with the current state */
-    }
+    /* diff the given state with the current state
+     * expecting an object that contains new state for
+     * given exchanges
+     * ie: {'poloniex': {true, 'exmo': false, ...}
+     * */
+    updateState(newState) {}
 
     /* return the status for all the exchanges */
     getStatus() {
         return new Promise((resolve, reject) => {
-            console.log(this.store);
             let rv = {};
             rv.data = {};
             Object.keys(this.store).forEach(exchangeId => {
                 rv.data[exchangeId] = {};
                 rv.data[exchangeId].markets = Object.assign({}, this.store[exchangeId].markets);
                 rv.data[exchangeId].strategy = this.store[exchangeId].strategy;
+                rv.data.running = this.store[exchangeId].running;
             });
             /* typeify the message */
             rv.type = 'status-all';
@@ -56,6 +60,15 @@ class ExchangeDAO {
                 /* diff the data with current exchange data */
                 exchange.strategy = data.strategy;
                 exchange.markets = Object.assign({}, data.markets);
+            })
+            .catch((err) => console.log(err))
+    }
+
+    /* update exchange running state (is the script running?) */
+    updateExchangeRunningState(exchangeId, isRunning) {
+        this.findExchangeById(exchangeId)
+            .then((exchange) => {
+                exchange.running = isRunning;
             })
             .catch((err) => console.log(err))
     }
