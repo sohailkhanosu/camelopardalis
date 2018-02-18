@@ -27,7 +27,11 @@ class ExchangeCollectionDAO {
                 rv.data[exchangeId] = {};
                 rv.data[exchangeId].markets = Object.assign({}, this.store[exchangeId].markets);
                 rv.data[exchangeId].strategy = this.store[exchangeId].strategy;
-                rv.data.running = this.store[exchangeId].running;
+                rv.data[exchangeId].running = this.store[exchangeId].running;
+                // TODO: deep copy these or just do json.stringify/parse
+                rv.data[exchangeId].balances = this.store[exchangeId].balances;
+                rv.data[exchangeId].activeOrders = this.store[exchangeId].orders || [];
+                rv.data[exchangeId].trades = this.store[exchangeId].trades || [];
             });
             /* typeify the message */
             rv.type = 'status-all';
@@ -73,20 +77,52 @@ class ExchangeDAO {
             .catch((err) => console.log(err))
     }
 
-    getOrdersById() {
-
+    getBalances(exchangeId) {
+        return new Promise((resolve, reject) => {
+            this.findExchangeById(exchangeId)
+                .then(exchange => resolve(exchange.balances))
+                .catch(err => console.log(err))
+        })
     }
 
-    getTradesById() {
-
+    getOrders(exchangeId) {
+        return new Promise((resolve, reject) => {
+            this.findExchangeById(exchangeId)
+                .then(exchange => resolve(exchange.orders))
+                .catch(err => console.log(err))
+        })
     }
 
-    updateTradesById() {
-
+    getTrades(exchangeId) {
+        return new Promise((resolve, reject) => {
+            this.findExchangeById(exchangeId)
+                .then(exchange => resolve(exchange.trades))
+                .catch(err => console.log(err))
+        })
     }
 
-    updateOrdersById() {
+    updateBalances(exchangeId, newBalance) {
+        this.findExchangeById(exchangeId)
+            .then(exchange => {
+                exchange.balances = newBalance;
+            })
+            .catch(err => console.log(err))
+    }
 
+    updateOrders(exchangeId, orders) {
+        this.findExchangeById(exchangeId)
+            .then(exchange => {
+                exchange.orders = orders;
+            })
+            .catch(err => console.log(err))
+    }
+
+    updateTrades(exchangeId, trades) {
+        this.findExchangeById(exchangeId)
+            .then(exchange => {
+                exchange.trades = trades;
+            })
+            .catch(err => console.log(err))
     }
 }
 
