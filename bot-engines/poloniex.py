@@ -46,15 +46,41 @@ def balances_generator():
             }
         }
 
+def status_generator():
+    while True:
+        yield {
+            'type': 'status',
+            'exchange': 'poloniex',
+            'data': {
+                'strategy': 'Basic',
+                'markets': {
+                    'ETH_BTC': random.random() > 0.10,
+                    'BCC_BTC': random.random() > 0.10
+                }
+            }
+        }
+
 
 def main(args: List[str]) -> None:
-    generators = [trades_generator(), balances_generator()]
+    generators = [trades_generator(), balances_generator(), status_generator()]
     
     # prime generators
     for gen in generators:
         next(gen)
 
     while True:
+        # print the status one at each loop
+        print(json.dumps(next(generators[-1])), flush=True)
+        try:
+            received_data = json.loads(input())
+        except Exception:
+            print(json.dumps({'type': 'error', 'data': 'unable to read value shutting down'}))
+            return 1
+
+        if received_data.get('type') == 'shutdown':
+            return 0
+        elif received_data.get('type') == 'ping':
+            print(json.dumps({'type': 'pong', 'data': received_data['data'], 'exchange': 'exmo'}), flush=True)
         print(json.dumps(next(generators[random.randint(0, 1)])), flush=True)
         time.sleep(random.random() * 5)     # sleep between 0 -5 seconds
 

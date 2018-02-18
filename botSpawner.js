@@ -5,6 +5,9 @@ const EventEmitter = require('events');
 const fs = require('fs');
 const path = require('path');
 
+const store = require('./store');
+const {exchangeCollectionDAO: ecDAO, exchangeDAO} = require('./dao')(store);
+
 
 function getIdFromScriptPath(scriptPath) {
     return path.parse(scriptPath).name;
@@ -22,15 +25,16 @@ function startHeartBeat(botInstance, intervalTime) {
             try {
                 botInstance.fd.send({type: 'ping', data: currentCounter});
             } catch(err) {
-                console.log('catching..');
                 /* assume the worst, client closed connection */
                 botInstance.running = false;
+                exchangeDAO.updateExchangeRunningState(botInstance.id, false);
                 return;
             }
-            botInstance.fd.once('message', function pongListener(message) {
-                if (message.type === 'pong' && message.exchange === botInstance.id && message.data >= currentCounter) {
-                    console.log(message);
+            botInstance.fd.once(`${botInstance.id}-pong`, function pongListener(message) {
+                if (message.type === 'pong' && message.data >= currentCounter) {
                     pongReceived = true;
+                } else {
+                    botInstance.fd.once(`${botInstance.id}-pong`, pongListener);
                 }
             });
 
@@ -38,6 +42,7 @@ function startHeartBeat(botInstance, intervalTime) {
                if (!pongReceived) {
                    /* consider this bot dead */
                    botInstance.running = false;
+                   exchangeDAO.updateExchangeRunningState(botInstance.id, false);
                } else {
                    /* got the pong, restart the checker */
                    setTimeout(checker, intervalTime);
@@ -68,12 +73,28 @@ function initBot(spawner, botDirectory, scriptPath) {
         /* do not propagate private types such as ping/pong */
         if (message.type !== 'pong')
             spawner.emit('message', message);
+        else {
+            botInstance.fd.emit(`${botInstance.id}-pong`, message)
+        }
+
+        /* TODO: temporary message processing code;
+         * its fine after pass-through but switch statement here
+         * should be replaced with a function */
+        switch (message.type) {
+            case 'status':
+                exchangeDAO.updateExchange(message.exchange, message.data);
+                break;
+        }
     });
     botInstance.running = true;
     spawner.spawnedChildren[botInstance.id] = botInstance;
 
     /* start the heartbeat to ensure continuous connection */
     startHeartBeat(botInstance, spawner.heartBeatInterval);
+
+    /* register the exchange data */
+    ecDAO.addExchange(botInstance.id);
+    exchangeDAO.updateExchangeRunningState(botInstance.id, botInstance.running);
 }
 
 
@@ -115,6 +136,7 @@ function BotSpawner(options) {
             // maybe listen here for a message of type shutdown-confirm that has
             // the same botId
             this.spawnedChildren[botId].running = false;
+            exchangeDAO.updateExchangeRunningState(botId, false);
         }
     }
 
@@ -123,13 +145,11 @@ function BotSpawner(options) {
         if (this.spawnedChildren.hasOwnProperty(botId) && !this.spawnedChildren[botId].running) {
             // check to see if the process is not running and is terminated
             // it could have been signaled for shutdown but not yet have exited
-            if (!this.spawnedChildren[botId].running && this.spawnedChildren[botId].fd.terminated) {
-                /* in this case, lets just delete the original instance and start a new one */
-                var script = this.spawnedChildren[botId].scriptPath;
-                var botDir = this.spawnedChildren[botId].botDir;
-                delete this.spawnedChildren[botId];
-                initBot(self, botDir, script);
-            }
+            /* in this case, lets just delete the original instance and start a new one */
+            var script = this.spawnedChildren[botId].scriptPath;
+            var botDir = this.spawnedChildren[botId].botDir;
+            delete this.spawnedChildren[botId];
+            initBot(self, botDir, script);
         }
     }
 
@@ -142,4 +162,12 @@ function BotSpawner(options) {
 }
 
 util.inherits(BotSpawner, EventEmitter);
-module.exports = BotSpawner;
+
+var _bs = null;
+
+module.exports = function (config) {
+    if (_bs === null) {
+        _bs = new BotSpawner(config || {});
+    }
+    return _bs;
+}

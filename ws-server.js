@@ -1,6 +1,7 @@
 const WebSocket = require('ws');
-const BotSpawner = require('./botSpawner.js');
-const bs = new BotSpawner();
+const bs = require('./botSpawner.js')();
+const store = require('./store');
+const ecDAO = require('./dao')(store).exchangeCollectionDAO;
 
 function clientHandler(ws, req) {
     function messageForwarder(message) {
@@ -23,6 +24,9 @@ function clientHandler(ws, req) {
     })
 
     bs.on('message', messageForwarder);
+
+    /* forward the initial state to the client */
+    ecDAO.getStatus().then((data) => ws.send(JSON.stringify(data)));
 }
 
 module.exports = function registerWSS(server) {
