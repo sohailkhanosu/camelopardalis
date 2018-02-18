@@ -51,7 +51,7 @@ class TradingBot(object):
                     msg = self.msg_queue.get()
                     self.process_msg(msg)
                 new_orders = self.execute_strategy()
-                self.push(new_orders, "new_orders")
+                # self.push(new_orders, "new_orders")
                 self.report()
             except Exception as e:
                 self.push(e, 'error')
@@ -63,11 +63,16 @@ class TradingBot(object):
 
     def process_msg(self, msg):
         if msg['type'] == 'markets':
-            for k, v in msg.items():
+            for k, v in msg['data'].items():
+                if self.markets_on[k] and v == 'off':  # cancel trades if turning off market
+                    logging.info("Turning off market {}, cancelling trades".format(k))
+                    self.exchange.cancel(market=self.markets[k])
                 self.markets_on[k] = (v == 'on')
         elif msg['type'] == 'pause':
-            for k, v in msg.items():
-                self.markets_on[k] = False
+            for m in self.markets_on.keys():
+                self.markets_on[m] = False
+            logging.info("Pausing all markets. Cancelling all active trades")
+            self.exchange.cancel(all=True)
 
     def execute_strategy(self):
         new_orders = []
@@ -198,22 +203,22 @@ class BasicStrategy(Strategy):
         best_ask = ticker.ask
         best_bid = ticker.bid
         last = ticker.last
-        logging.info("best ask: {}".format(best_ask))
-        logging.info("best bid: {}".format(best_bid))
-        logging.info("last: {}".format(last))
+        logging.info("{} best ask: {}".format(market.symbol, best_ask))
+        logging.info("{} best bid: {}".format(market.symbol, best_bid))
+        logging.info("{} last: {}".format(market.symbol, last))
         market_value = (best_ask + best_bid) / 2
         return market_value
 
     def trade(self, market):
-        self.exchange.cancel(all=True)  # cancel previous orders
+        self.exchange.cancel(market=market)  # cancel previous orders in this market
         spread = .004
         market_value = self.analyze_market(market)
         ask_quote = market_value + (spread / 2)
         bid_quote = market_value - (spread / 2)
 
-        logging.info("market value: {}".format(market_value))
-        logging.info("ask quote: {}".format(ask_quote))
-        logging.info("bid quote: {}".format(bid_quote))
+        logging.info("{} market value: {}".format(market.symbol, market_value))
+        logging.info("{} ask quote: {}".format(market.symbol, ask_quote))
+        logging.info("{} bid quote: {}".format(market.symbol, bid_quote))
 
         try:
             new_orders = []
@@ -222,7 +227,7 @@ class BasicStrategy(Strategy):
             for order in [bid, ask]:
                 if order:
                     new_orders.append(order)
-                    logging.info("Successfully placed {} order #{}".format(order.side, order.order_id))
+                    logging.info("Successfully placed {} order #{} in {}".format(order.side, order.order_id, market.symbol))
 
             return new_orders
         except Exception as e:

@@ -27,7 +27,8 @@ class Mocker(object):
             # randomly turn 'complete' some orders and turn into trades
             o = random.choice(self.active_orders)
             self.active_orders.remove(o)
-            self.trades[o['symbol']] .append(self.to_trade(o))
+            self.trades[o['symbol']].append(self.to_trade(o))
+            self.trades[o['symbol']] = self.trades[o['symbol']][-20:]
         return json.dumps(self.active_orders)
 
     def order(self, request, context):
@@ -132,6 +133,14 @@ class Mocker(object):
             "timestamp": dt.datetime.utcnow().isoformat()
         }
 
+    def cancel(self, request, context):
+        params = parse_qs(request._request.body)
+        if params:
+            self.active_orders = [o for o in self.active_orders if o['symbol'] != params['symbol'][0]]
+        else:
+            self.active_orders = []
+        return "[]"
+
 mock_adapter = requests_mock.Adapter()
 mocker = Mocker()
 
@@ -163,4 +172,4 @@ matcher = re.compile('/order/.{10,}')
 mock_adapter.register_uri('DELETE', matcher, text=responses.cancel_one_res)
 
 matcher = re.compile('/order$')
-mock_adapter.register_uri('DELETE', matcher, text=responses.cancel_mul_res)
+mock_adapter.register_uri('DELETE', matcher, text=mocker.cancel)
