@@ -24,4 +24,4 @@ deploy-image:
 # port 3000. Or better yet, proxy to nginx
 .PHONY: create-container-vm
 create-container-vm: .state-image-deployed
-	gcloud beta compute instances create-with-container ${VM_NAME} --container-image ${REGISTRY_HOST}/${GCLOUD_PROJECT}/${IMAGE_NAME}/${TAG_NAME}
+	gcloud beta compute instances create-with-container ${VM_NAME} --container-image ${REGISTRY_HOST}/${GCLOUD_PROJECT}/${IMAGE_NAME}/${TAG_NAME} || gcloud beta compute instances update-container ${VM_NAME} --container-image ${REGISTRY_HOST}/${GCLOUD_PROJECT}/${IMAGE_NAME}/${TAG_NAME}
