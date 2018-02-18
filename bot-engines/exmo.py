@@ -63,6 +63,8 @@ def main(args: List[str]) -> None:
 
         if received_data.get('type') == 'shutdown':
             return 0
+        elif received_data.get('type') == 'ping':
+            print(json.dumps({'type': 'pong', 'data': received_data['data'], 'exchange': 'exmo'}), flush=True)
         print(json.dumps(next(generators[random.randint(0, 1)])), flush=True)
         time.sleep(random.random() * 5)     # sleep between 0 -5 seconds
 
