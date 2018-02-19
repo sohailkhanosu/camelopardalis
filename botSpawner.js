@@ -93,6 +93,9 @@ function initBot(spawner, botDirectory, scriptPath) {
             case 'trades':
                 exchangeDAO.updateTrades(message.exchange, message.data);
                 break;
+            case 'orderbooks':
+                exchangeDAO.updateOrderBooks(message.exchange, message.data);
+                break;
         }
     });
     botInstance.running = true;

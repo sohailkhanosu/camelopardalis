@@ -32,6 +32,7 @@ class ExchangeCollectionDAO {
                 rv.data[exchangeId].balances = this.store[exchangeId].balances;
                 rv.data[exchangeId].activeOrders = this.store[exchangeId].orders || [];
                 rv.data[exchangeId].trades = this.store[exchangeId].trades || [];
+                rv.data[exchangeId].orderBooks = this.store[exchangeId].orderBooks || [];
             });
             /* typeify the message */
             rv.type = 'status-all';
@@ -93,6 +94,14 @@ class ExchangeDAO {
         })
     }
 
+    getOrderBooks(exchangeId) {
+        return new Promise((resolve, reject) => {
+            this.findExchangeById(exchangeId)
+                .then(exchange => resolve(exchange.orderBooks))
+                .catch(err => console.log(err))
+        })
+    }
+
     getTrades(exchangeId) {
         return new Promise((resolve, reject) => {
             this.findExchangeById(exchangeId)
@@ -113,6 +122,14 @@ class ExchangeDAO {
         this.findExchangeById(exchangeId)
             .then(exchange => {
                 exchange.orders = orders;
+            })
+            .catch(err => console.log(err))
+    }
+
+    updateOrderBooks(exchangeId, orderBooks) {
+        this.findExchangeById(exchangeId)
+            .then(exchange => {
+                exchange.orderBooks = orderBooks;
             })
             .catch(err => console.log(err))
     }
