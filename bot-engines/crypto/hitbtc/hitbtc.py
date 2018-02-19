@@ -11,7 +11,7 @@ from crypto.helpers import print_json
 class HitBTCExchange(Exchange):
     def __init__(self, base_url, key, secret, symbols, mock=True):
         super().__init__(base_url, key, secret, symbols, mock)
-        logging.basicConfig(filename='hitbtc.log', level=logging.INFO)
+        
         self.session = requests.session()
         if mock:
             self.session.mount('mock', mock_adapter)

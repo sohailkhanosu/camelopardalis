@@ -2,9 +2,10 @@ from crypto import TradingBot
 import sys
 import logging
 
+
 def main():
-	logging.basicConfig(filename='hitbtc.log', level=logging.INFO)
-	b = TradingBot('hitbtc', config_path='config.ini', mock=False)
+	logging.basicConfig(filename='mockhitbtc.log', level=logging.INFO)
+	b = TradingBot('mockhitbtc', config_path='config.ini', mock=True)
 	try:
 		b.run()
 	except (KeyboardInterrupt, SystemExit) as e:
