@@ -70,7 +70,7 @@ class Mocker(object):
 
             response = {"ask": [], "bid": []}
             ask = bid = self.values[symbol]
-            for _ in range(5):
+            for _ in range(10):
                 ask += random.uniform(.00001, self.values[symbol]/100)
                 bid -= random.uniform(.00001, self.values[symbol]/100)
                 response['ask'].append({"price": ask, "size": random.uniform(.001, 100)})
