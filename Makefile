@@ -7,6 +7,12 @@ VM_NAME=camelopardalis-vm
 all:
 	@echo "makefile to deploy to gcp"
 
+run-docker:
+	@echo "building image..."
+	@docker build -t ${IMAGE_NAME} .
+	docker run --rm -p "3000:3000" ${IMAGE_NAME}
+
+
 .PHONY: deploy-image
 deploy-image:
 	docker build -t ${IMAGE_NAME} .
