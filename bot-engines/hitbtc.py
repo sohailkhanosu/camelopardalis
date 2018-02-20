@@ -10,6 +10,7 @@ def main():
 	except (KeyboardInterrupt, SystemExit) as e:
 		logging.info("Exiting program")
 		b.exchange.cancel(all=True)  # cancel orders one more time just to be sure
+		b.push([], 'active_orders')
 		sys.exit(0)
 
 if __name__ == "__main__":
