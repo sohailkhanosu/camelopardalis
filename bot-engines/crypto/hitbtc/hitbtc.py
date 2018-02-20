@@ -11,7 +11,7 @@ from crypto.helpers import print_json
 class HitBTCExchange(Exchange):
     def __init__(self, base_url, key, secret, symbols, mock=True):
         super().__init__(base_url, key, secret, symbols, mock)
-        logging.basicConfig(filename='hitbtc.log', level=logging.INFO)
+
         self.session = requests.session()
         if mock:
             self.session.mount('mock', mock_adapter)
@@ -23,89 +23,113 @@ class HitBTCExchange(Exchange):
 
     # Interface
     def bid(self, market, rate, quantity):
-        status, data = self._order_create(market.symbol, side="buy", price=rate, quantity=quantity)
-        if status == 200:
-            return self._to_order(data)
-        else:
-            raise Exception(data['error']['message'])
+        try:
+            status, data = self._order_create(market.symbol, side="buy", price=rate, quantity=quantity)
+            if status == 200:
+                return self._to_order(data)
+            else:
+                raise Exception(data['error']['message'])
+        except Exception as e:
+            logging.exception("Error in bid function")
 
     def ask(self, market, rate, quantity):
-        status, data = self._order_create(market.symbol, side="sell", price=rate, quantity=quantity)
-        if status == 200:
-            return self._to_order(data)
-        else:
-            raise Exception(data['error']['message'])
+        try:
+            status, data = self._order_create(market.symbol, side="sell", price=rate, quantity=quantity)
+            if status == 200:
+                return self._to_order(data)
+            else:
+                raise Exception(data['error']['message'])
+        except Exception as e:
+            logging.exception("Error in ask function")
 
     def cancel(self, order_id=None, market=None, all=False):
-        if all:
-            status, data = self._orders_cancel()
-            orders = list(map(self._to_order, data))
-        elif market:
-            status, data = self._orders_cancel(market.symbol)
-            orders = list(map(self._to_order, data))
-        elif order_id:
-            status, data = self._order_cancel(order_id)
-            orders = [self._to_order(data)]
-        else:
-            raise Exception('Specify order_id, market, or all')
-        if status == 200:
+        try:
+            if all:
+                status, data = self._orders_cancel()
+                orders = list(map(self._to_order, data))
+            elif market:
+                status, data = self._orders_cancel(market.symbol)
+                orders = list(map(self._to_order, data))
+            elif order_id:
+                status, data = self._order_cancel(order_id)
+                orders = [self._to_order(data)]
+            else:
+                raise Exception('Specify order_id, market, or all')
             return orders
-        else:
-            raise Exception(data['error']['message'])
+        except Exception as e:
+            logging.exception("Error in cancel function")
 
     def balance(self):
-        status, data = self._trading_balance()
-        if status == 200:
-            return {d['currency']: Balance(d['available'], d['reserved']) for d in data}
-        else:
-            raise Exception(data['error']['message'])
+        try:
+            status, data = self._trading_balance()
+            if status == 200:
+                return {d['currency']: Balance(d['available'], d['reserved']) for d in data}
+            else:
+                raise Exception(data['error']['message'])
+        except Exception as e:
+            logging.exception("Error in balance function")
 
     def orders(self, market=None):
-        symbol = market.symbol if market else ''
-        status, data = self._orders_active(symbol)
-        orders = list(map(self._to_order, data))
-        if status == 200:
-            return orders
-        else:
-            raise Exception(data['error']['message'])
+        try:
+            symbol = market.symbol if market else ''
+            status, data = self._orders_active(symbol)
+            orders = list(map(self._to_order, data))
+            if status == 200:
+                return orders
+            else:
+                raise Exception(data['error']['message'])
+        except Exception as e:
+            logging.exception("Error in orders function")
 
     def order_book(self, market):
-        status, data = self._orderbook(market.symbol)
-        asks = [Entry(d['price'], d['size']) for d in data['ask']]
-        bids = [Entry(d['price'], d['size']) for d in data['bid']]
-        orderbook = OrderBook(asks, bids)
-        if status == 200:
-            return orderbook
-        else:
-            raise Exception(data['error']['message'])
+        try:
+            status, data = self._orderbook(market.symbol)
+            asks = [Entry(d['price'], d['size']) for d in data['ask'][:10]]
+            bids = [Entry(d['price'], d['size']) for d in data['bid'][:10]]
+            orderbook = OrderBook(asks, bids)
+            if status == 200:
+                return orderbook
+            else:
+                raise Exception(data['error']['message'])
+        except Exception as e:
+            logging.exception("Error in order_book function")
 
     def ticker(self, market=None):
-        symbol = market.symbol if market else ''
-        status, data = self._tickers(symbol)
-        if status == 200:
-            if market:
-                return self._to_ticker(data, market)
+        try:
+            symbol = market.symbol if market else ''
+            status, data = self._tickers(symbol)
+            if status == 200:
+                if market:
+                    return self._to_ticker(data, market)
+                else:
+                    tickers = [self._to_ticker(d) for d in data]
+                    return tickers
             else:
-                tickers = [self._to_ticker(d) for d in data]
-                return tickers
-        else:
-            raise Exception(data['error']['message'])
+                raise Exception(data['error']['message'])
+        except Exception as e:
+            logging.exception("Error in ticker function")
 
     def market_trades(self, market):
-        status, data = self._trades(market.symbol)
-        trades = [self._to_trade(d, market) for d in data]
-        if status == 200:
-            return trades
-        else:
-            raise Exception(data['error']['message'])
+        try:
+            status, data = self._trades(market.symbol)
+            trades = [self._to_trade(d, market) for d in data]
+            if status == 200:
+                return trades
+            else:
+                raise Exception(data['error']['message'])
+        except Exception as e:
+            logging.exception("Error in market_trades function")
 
     def trades(self, market):
-        status, data = self._history_trades(market.symbol)
-        trades = [self._to_trade(d, market) for d in data]
-        if status == 200:
-            return trades
-        else:
-            raise Exception(data['error']['message'])
+        try:
+            status, data = self._history_trades(market.symbol)
+            trades = [self._to_trade(d, market) for d in data]
+            if status == 200:
+                return trades
+            else:
+                raise Exception(data['error']['message'])
+        except Exception as e:
+            logging.exception("Error in trades function")
 
     # Data conversion
     def to_market(self, symbol):

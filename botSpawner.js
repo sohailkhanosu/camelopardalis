@@ -98,6 +98,10 @@ function initBot(spawner, botDirectory, scriptPath) {
                 break;
         }
     });
+    botInstance.fd.on('error', function (message) {
+        console.error('stream error', message);
+    });
+
     botInstance.running = true;
     spawner.spawnedChildren[botInstance.id] = botInstance;
 

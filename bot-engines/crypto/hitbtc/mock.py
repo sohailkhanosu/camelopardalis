@@ -28,7 +28,7 @@ class Mocker(object):
             o = random.choice(self.active_orders)
             self.active_orders.remove(o)
             self.trades[o['symbol']].append(self.to_trade(o))
-            self.trades[o['symbol']] = self.trades[o['symbol']][-20:]
+            self.trades[o['symbol']] = self.trades[o['symbol']][-5:]
         return json.dumps(self.active_orders)
 
     def order(self, request, context):

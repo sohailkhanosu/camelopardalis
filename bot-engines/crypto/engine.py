@@ -30,6 +30,7 @@ class TradingBot(object):
         self.msg_queue = Queue(maxsize=10)
         self.on = True
         self.work_thread = None
+        self.end_time = time.time() + (60 * 5) # 5 minute timeout
         signal.signal(signal.SIGINT, self.sig_handler)
 
     def run(self):
@@ -37,14 +38,19 @@ class TradingBot(object):
         self.work_thread.daemon = True
         self.work_thread.start()
 
-        while True:
+        while time.time() < self.end_time:
             self.pull()
+        self.on = False
+        logging.info("Timeout")
+        self.work_thread.join()
+        raise SystemExit
 
     def work(self):
         while True:
             if not self.on:
                 logging.info("Cancelling trades")
                 self.exchange.cancel(all=True)
+                self.push([], 'active_orders')
                 return
             try:
                 if not self.msg_queue.empty():
