@@ -1,6 +1,6 @@
 import configparser
 import abc
-from .helpers import str_to_class, serialize_obj, print_json
+from .helpers import str_to_class, serialize_obj
 import json
 import random
 from queue import Queue
@@ -9,45 +9,51 @@ import threading
 import os
 import logging
 import signal
+import sys
 
 
 class TradingBot(object):
     def __init__(self, name, exchange=None, strategy=None, config_path=None, mock=True):
         if config_path:
-            config = configparser.ConfigParser(allow_no_value=True)
-            fname = os.path.join(os.path.dirname(__file__), 'config.ini')
-            config.read(fname)
-            wrapper_class = str_to_class(config[name]['Wrapper'])
-            strategy_class = str_to_class(config[name]['Strategy'])
-            exchange = wrapper_class(config[name]['BaseUrl'], config[name]['Key'], config[name]['Secret'],
-                                     config[name]['Symbols'].split(','), mock)
-            strategy = strategy_class(exchange)
+            try:
+                config = configparser.ConfigParser(allow_no_value=True)
+                fname = os.path.join(os.path.dirname(__file__), 'config.ini')
+                config.read(fname)
+                wrapper_class = str_to_class(config[name]['Wrapper'])
+                strategy_class = str_to_class(config[name]['Strategy'])
+                exchange = wrapper_class(config[name]['BaseUrl'], config[name]['Key'], config[name]['Secret'],
+                                         config[name]['Symbols'].split(','), mock)
+                strategy = strategy_class(exchange)
+            except Exception as e:
+                logging.exception("Error reading config file")
+                sys.exit(0)
         self.name = name
         self.exchange = exchange
         self.strategy = strategy
         self.markets = {m.counter + '_' + m.base: m for m in list(map(self.exchange.to_market, self.exchange.symbols))}
         self.markets_on = {m: True for m in self.markets.keys()}
         self.msg_queue = Queue(maxsize=10)
-        self.on = True
+        self.turn_off = threading.Event()
         self.work_thread = None
-        self.end_time = time.time() + (60 * 5) # 5 minute timeout
+        self.end_time = time.time() + (60 * 5)  # 5 minute timeout
         signal.signal(signal.SIGINT, self.sig_handler)
 
     def run(self):
+        logging.info('Turning on')
         self.work_thread = threading.Thread(target=self.work)
         self.work_thread.daemon = True
         self.work_thread.start()
 
         while time.time() < self.end_time:
             self.pull()
-        self.on = False
+        self.turn_off.set()
         logging.info("Timeout")
         self.work_thread.join()
         raise SystemExit
 
     def work(self):
         while True:
-            if not self.on:
+            if self.turn_off.is_set():
                 logging.info("Cancelling trades")
                 self.exchange.cancel(all=True)
                 self.push([], 'active_orders')
@@ -140,7 +146,7 @@ class TradingBot(object):
             logging.info("Input timed out, turning off bot")
         else:
             logging.info("Received SIGINT, turning off bot")
-        self.on = False
+        self.turn_off.set()
         self.work_thread.join()
         raise SystemExit
 
@@ -195,50 +201,5 @@ class Strategy(object):
     @abc.abstractmethod
     def trade(self, market):
         pass
-
-
-class BasicStrategy(Strategy):
-    def __init__(self, exchange):
-        super().__init__(exchange)
-
-    def __str__(self):
-        return "Basic"
-
-    def analyze_market(self, market):
-        ticker = self.exchange.ticker(market)
-        best_ask = ticker.ask
-        best_bid = ticker.bid
-        last = ticker.last
-        logging.info("{} best ask: {}".format(market.symbol, best_ask))
-        logging.info("{} best bid: {}".format(market.symbol, best_bid))
-        logging.info("{} last: {}".format(market.symbol, last))
-        market_value = (best_ask + best_bid) / 2
-        return market_value
-
-    def trade(self, market):
-        self.exchange.cancel(market=market)  # cancel previous orders in this market
-        spread = .004
-        market_value = self.analyze_market(market)
-        ask_quote = market_value + (spread / 2)
-        bid_quote = market_value - (spread / 2)
-
-        logging.info("{} market value: {}".format(market.symbol, market_value))
-        logging.info("{} ask quote: {}".format(market.symbol, ask_quote))
-        logging.info("{} bid quote: {}".format(market.symbol, bid_quote))
-
-        try:
-            new_orders = []
-            bid = self.exchange.bid(market=market, rate=bid_quote, quantity=.001)
-            ask = self.exchange.ask(market=market, rate=ask_quote, quantity=.001)
-            for order in [bid, ask]:
-                if order:
-                    new_orders.append(order)
-                    logging.info("Successfully placed {} order #{} in {}".format(order.side, order.order_id, market.symbol))
-
-            return new_orders
-        except Exception as e:
-            logging.warning('Order failed: "{}"'.format(e))
-            self.exchange.cancel(all=True)
-            raise e
 
 

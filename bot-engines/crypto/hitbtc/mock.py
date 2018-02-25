@@ -141,6 +141,19 @@ class Mocker(object):
             self.active_orders = []
         return "[]"
 
+    def symbol(self, request, context):
+        symbol = request._request.url.split('/')[-1]
+        if symbol != 'symbol' and symbol != '':
+            response = {
+                "quoteCurrency": symbol[:len(symbol)//2],
+                "baseCurrency": symbol[len(symbol)//2:],
+                "quantityIncrement": .001,
+                "provideLiquidityRate": 0,
+                "takeLiquidityRate": 0
+            }
+            return json.dumps(response)
+
+
 mock_adapter = requests_mock.Adapter()
 mocker = Mocker()
 
@@ -158,6 +171,9 @@ mock_adapter.register_uri('GET', matcher, text=mocker.balances)
 
 matcher = re.compile('/history/trades')
 mock_adapter.register_uri('GET', matcher, text=mocker.trade_history)
+
+matcher = re.compile('/symbol')
+mock_adapter.register_uri('GET', matcher, text=mocker.symbol)
 
 # matcher = re.compile('/trading/balance')
 # mock_adapter.register_uri('GET', matcher, text=responses.error_res, status_code=400)
