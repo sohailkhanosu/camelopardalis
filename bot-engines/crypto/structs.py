@@ -3,10 +3,13 @@ class Currency:
 
 
 class Market(object):
-    def __init__(self, counter, base, symbol):
+    def __init__(self, counter, base, symbol, increment, make_fee, take_fee):
         self.counter = counter
         self.base = base
         self.symbol = symbol
+        self.increment = increment
+        self.make_fee = make_fee
+        self.take_fee = take_fee
 
 
 class Order(object):

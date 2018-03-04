@@ -1,17 +1,16 @@
 from crypto.engine import Exchange
 import requests
-import itertools as it
 from crypto.structs import Order, Trade, Market, Ticker, Balance, OrderBook, Entry
 import dateutil.parser
-from .mock import mock_adapter
+from crypto.hitbtc.mock import mock_adapter
 import logging
+import configparser
 from crypto.helpers import print_json
 
 
 class HitBTCExchange(Exchange):
     def __init__(self, base_url, key, secret, symbols, mock=True):
         super().__init__(base_url, key, secret, symbols, mock)
-
         self.session = requests.session()
         if mock:
             self.session.mount('mock', mock_adapter)
@@ -135,16 +134,12 @@ class HitBTCExchange(Exchange):
     def to_market(self, symbol):
         m = self.markets.get(symbol, None)
         if not m:
-            if len(symbol) % 2 == 0:
-                counter, base = self._split_symbol(symbol)
+            status, data = self._symbols(symbol)
+            if status == 200:
+                m = Market(counter=data['quoteCurrency'], base=data['baseCurrency'], symbol=symbol, increment=data['quantityIncrement'],
+                           make_fee=data['provideLiquidityRate'], take_fee=data['takeLiquidityRate'])
             else:
-                status, data = self._symbols(symbol)
-                if status == 200:
-                    counter = data['quoteCurrency']
-                    base = data['baseCurrency']
-                else:
-                    raise Exception(data['error']['message'])
-            m = Market(counter, base, symbol)
+                raise Exception(data['error']['message'])
         return m
 
     def _split_symbol(self, symbol):
@@ -281,3 +276,12 @@ class HitBTCExchange(Exchange):
     def _history_trade(self, orderId):
         response = self.session.get(self.base_url + '/history/order/' + orderId + '/trades')
         return response.status_code, response.json()
+
+
+if __name__ == "__main__":
+    config = configparser.ConfigParser(allow_no_value=True)
+    config.read("../config.ini")
+    b = HitBTCExchange(config["hitbtc"]['BaseUrl'], config['hitbtc']['Key'], config['hitbtc']['Secret'],
+                       config['hitbtc']['Symbols'].split(','), False)
+    r = b._symbols('ETHBTC')
+    print_json(r[1])

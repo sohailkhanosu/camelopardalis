@@ -4,8 +4,8 @@ import logging
 
 
 def main():
-    logging.basicConfig(filename='mockhitbtc.log', level=logging.INFO, format='%(asctime)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
-    b = TradingBot('mockhitbtc', config_path='config.ini', mock=True)
+    logging.basicConfig(filename='bitmex.log', level=logging.INFO, format='%(asctime)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+    b = TradingBot('bitmex', config_path='config.ini', mock=False)
     try:
         b.run()
     except (KeyboardInterrupt, SystemExit) as e:

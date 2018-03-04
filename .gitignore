@@ -1,6 +1,7 @@
 # editor stuff
 *.swp
 .idea/
+*.iml
 
 # python stuff
 build
