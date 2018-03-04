@@ -62,3 +62,14 @@ class Entry(object):
     def __init__(self, rate, quantity):
         self.rate = float(rate)
         self.quantity = float(quantity)
+
+
+class Candle(object):
+    def __init__(self, market, open, high, low, close, volume, time):
+        self.market = market
+        self.open = float(open) if open else None
+        self.high = float(high) if high else None
+        self.low = float(low) if low else None
+        self.close = float(close) if close else None
+        self.volume = float(volume) if volume else None
+        self.time = time

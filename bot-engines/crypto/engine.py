@@ -23,15 +23,21 @@ class TradingBot(object):
                 strategy_class = str_to_class(config[name]['Strategy'])
                 exchange = wrapper_class(config[name]['BaseUrl'], config[name]['Key'], config[name]['Secret'],
                                          config[name]['Symbols'].split(','), mock)
-                strategy = strategy_class(exchange)
+                if config[name]['Strategy'].lower() in config.sections():
+                    strat_params = config[config[name]['Strategy'].lower()]
+                else:
+                    strat_params = None
+                strategy = strategy_class(exchange, strat_params)
             except Exception as e:
                 logging.exception("Error reading config file")
                 sys.exit(0)
         self.name = name
         self.exchange = exchange
         self.strategy = strategy
+
         self.markets = {m.counter + '_' + m.base: m for m in list(map(self.exchange.to_market, self.exchange.symbols))}
         self.markets_on = {m: True for m in self.markets.keys()}
+
         self.msg_queue = Queue(maxsize=10)
         self.turn_off = threading.Event()
         self.work_thread = None
@@ -62,7 +68,7 @@ class TradingBot(object):
                 if not self.msg_queue.empty():
                     msg = self.msg_queue.get()
                     self.process_msg(msg)
-                new_orders = self.execute_strategy()
+                signal = self.execute_strategy()
                 # self.push(new_orders, "new_orders")
                 self.report()
             except Exception as e:
@@ -193,9 +199,13 @@ class Exchange(abc.ABC):
     def market_trades(self, market):
         pass
 
+    @abc.abstractmethod
+    def candles(self, market):
+        pass
+
 
 class Strategy(object):
-    def __init__(self, exchange):
+    def __init__(self, exchange, params):
         self.exchange = exchange
 
     @abc.abstractmethod

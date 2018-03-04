@@ -1,7 +1,7 @@
 import json
 import sys
 from datetime import datetime, date
-from crypto.structs import Market, Balance, Order, OrderBook, Ticker, Entry, Trade
+from crypto.structs import Market, Balance, Order, OrderBook, Ticker, Entry, Trade, Candle
 import signal
 import logging
 
@@ -19,7 +19,7 @@ def serialize_obj(obj):
         return obj.strftime("%s")
     elif isinstance(obj, Market):
         return obj.counter.upper() + "_" + obj.base.upper()
-    elif isinstance(obj, (Balance, Order, Ticker, Entry, OrderBook, Trade)):
+    elif isinstance(obj, (Balance, Order, Ticker, Entry, OrderBook, Trade, Candle)):
         return obj.__dict__
     elif isinstance(obj, (json.JSONDecodeError, Exception)):
         return str(obj)

@@ -1,6 +1,6 @@
 from crypto.engine import Exchange
 import requests
-from crypto.structs import Order, Trade, Market, Ticker, Balance, OrderBook, Entry
+from crypto.structs import Order, Trade, Market, Ticker, Balance, OrderBook, Entry, Candle
 import dateutil.parser
 import logging
 import configparser
@@ -21,7 +21,11 @@ class BitMEXExchange(Exchange):
     # Interface
     def bid(self, market, rate, quantity):
         try:
-            status, data = self._order(market.symbol, side="Buy", price=rate, orderQty=quantity)
+            if rate is None:
+                ord_type = 'Market'
+            else:
+                ord_type = None
+            status, data = self._order(market.symbol, side="Buy", price=rate, orderQty=quantity, ordType=ord_type)
             if status == 200:
                 return self._to_order(data)
             else:
@@ -31,7 +35,11 @@ class BitMEXExchange(Exchange):
 
     def ask(self, market, rate, quantity):
         try:
-            status, data = self._order(market.symbol, side="Sell", price=rate, orderQty=quantity)
+            if rate is None:
+                ord_type = 'Limit'
+            else:
+                ord_type = None
+            status, data = self._order(market.symbol, side="Sell", price=rate, orderQty=quantity, ordType=ord_type)
             if status == 200:
                 return self._to_order(data)
             else:
@@ -119,17 +127,27 @@ class BitMEXExchange(Exchange):
         except Exception as e:
             logging.exception("Error in trades function")
 
+    def candles(self, market, start=None, limit=100):
+        try:
+            status, data = self._trades_bucketed(market.symbol, count=limit, startTime=start)
+            candles = [self._to_candle(d) for d in data[::-1]]
+            if status == 200:
+                return candles
+            else:
+                raise Exception(data['error']['message'])
+        except Exception as e:
+            logging.exception("Error in candles function")
+
     # Data conversion
     def to_market(self, symbol):
         m = self.markets.get(symbol, None)
         if not m:
             status, data = self._instrument(symbol)
             if status == 200:
-                m = Market(counter=data[0]['rootSymbol'], base='XBT', symbol=symbol, increment=data[0]['lotSize'],
+                m = Market(counter=data[0]['rootSymbol'], base=data[0]['positionCurrency'], symbol=symbol, increment=data[0]['lotSize'],
                            make_fee=data[0]['makerFee'], take_fee=data[0]['takerFee'])
             else:
                 raise Exception(data['error']['message'])
-
         return m
 
     def _to_order(self, data):
@@ -157,6 +175,13 @@ class BitMEXExchange(Exchange):
         ticker = Ticker(market=market, ask=data['askPrice'], bid=data['bidPrice'], low=data['lowPrice'], high=data['highPrice'],
                         last=data['lastPrice'], base_volume=0, quote_volume=data['turnover'], time=time)
         return ticker
+
+    def _to_candle(self, data):
+        market = self.to_market(data['symbol'])
+        time = dateutil.parser.parse(data['timestamp'])
+        candle = Candle(market=market, open=data['open'], high=data['high'], low=data['low'],
+                       close=data['close'], volume=data['volume'], time=time)
+        return candle
 
     # API Methods
     def _wallet(self):
@@ -217,11 +242,21 @@ class BitMEXExchange(Exchange):
         r = requests.get(self.base_url + "/trade/", data=payload, auth=self.auth)
         return r.status_code, r.json()
 
+    def _trades_bucketed(self, symbol=None, binSize='1m', count=None, start=None, reverse=True, partial=False,
+                         startTime=None, endTime=None):
+        payload = {k: v for (k, v) in locals().items() if v is not None and v != self}
+        payload['reverse'] = "true" if payload['reverse'] else "false"
+        payload['partial'] = "true" if payload['partial'] else "false"
+        if binSize not in ['1m', '5m', '1h', '1d']:
+            raise Exception('Invalid binSize')
+        r = requests.get(self.base_url + "/trade/bucketed", data=payload)
+        return r.status_code, r.json()
+
 
 if __name__ == "__main__":
     config = configparser.ConfigParser(allow_no_value=True)
     config.read("../config.ini")
     b = BitMEXExchange(config["bitmex"]['BaseUrl'], config['bitmex']['Key'], config['bitmex']['Secret'],
                        config['bitmex']['Symbols'].split(','), False)
-    r = b._instrument("XRPH18")
+    r = b._order(symbol='XBTUSD', side='Buy', ordType='Market', orderQty=10, price=None)
     print_json(r[1])
