@@ -5,9 +5,6 @@ const EventEmitter = require('events');
 const fs = require('fs');
 const path = require('path');
 
-const store = require('./store');
-const {exchangeCollectionDAO: ecDAO, exchangeDAO} = require('./dao')(store);
-
 
 function getIdFromScriptPath(scriptPath) {
     return path.parse(scriptPath).name;
@@ -15,7 +12,7 @@ function getIdFromScriptPath(scriptPath) {
 
 
 /* start a heartbeat check with the given botInstance at every intervalTime seconds */
-function startHeartBeat(botInstance, intervalTime) {
+function startHeartBeat(botInstance, intervalTime, daos) {
     let counter = 1;
     let intervals = [];
     setTimeout(function checker() {
@@ -27,7 +24,7 @@ function startHeartBeat(botInstance, intervalTime) {
             } catch(err) {
                 /* assume the worst, client closed connection */
                 botInstance.running = false;
-                exchangeDAO.updateExchangeRunningState(botInstance.id, false);
+                daos.exchangeDAO.updateExchangeRunningState(botInstance.id, false);
                 return;
             }
             botInstance.fd.once(`${botInstance.id}-pong`, function pongListener(message) {
@@ -42,7 +39,7 @@ function startHeartBeat(botInstance, intervalTime) {
                if (!pongReceived) {
                    /* consider this bot dead */
                    botInstance.running = false;
-                   exchangeDAO.updateExchangeRunningState(botInstance.id, false);
+                   daos.exchangeDAO.updateExchangeRunningState(botInstance.id, false);
                } else {
                    /* got the pong, restart the checker */
                    setTimeout(checker, intervalTime);
@@ -82,19 +79,19 @@ function initBot(spawner, botDirectory, scriptPath) {
          * should be replaced with a function */
         switch (message.type) {
             case 'status':
-                exchangeDAO.updateExchange(message.exchange, message.data);
+                spawner.daos.exchangeDAO.updateExchange(message.exchange, message.data);
                 break;
             case 'balance':
-                exchangeDAO.updateBalances(message.exchange, message.data);
+                spawner.daos.exchangeDAO.updateBalances(message.exchange, message.data);
                 break;
             case 'active_orders':
-                exchangeDAO.updateOrders(message.exchange, message.data);
+                spawner.daos.exchangeDAO.updateOrders(message.exchange, message.data);
                 break;
             case 'trades':
-                exchangeDAO.updateTrades(message.exchange, message.data);
+                spawner.daos.exchangeDAO.updateTrades(message.exchange, message.data);
                 break;
             case 'orderbooks':
-                exchangeDAO.updateOrderBooks(message.exchange, message.data);
+                spawner.daos.exchangeDAO.updateOrderBooks(message.exchange, message.data);
                 break;
         }
     });
@@ -106,11 +103,11 @@ function initBot(spawner, botDirectory, scriptPath) {
     spawner.spawnedChildren[botInstance.id] = botInstance;
 
     /* start the heartbeat to ensure continuous connection */
-    startHeartBeat(botInstance, spawner.heartBeatInterval);
+    startHeartBeat(botInstance, spawner.heartBeatInterval, spawner.daos);
 
     /* register the exchange data */
-    ecDAO.addExchange(botInstance.id);
-    exchangeDAO.updateExchangeRunningState(botInstance.id, botInstance.running);
+    spawner.daos.exchangeCollectionDAO.addExchange(botInstance.id);
+    spawner.daos.exchangeDAO.updateExchangeRunningState(botInstance.id, botInstance.running);
 }
 
 
@@ -120,6 +117,8 @@ function initBot(spawner, botDirectory, scriptPath) {
  * this provides an event emitter interface, so clients can listen on messages
  * and receive an instance of data from any of the instantiated bots
  *
+ * daos are a set of data access objects used to manipulate state across app
+ *
  * to send data to a specific bot instance, use the method send with parameters bot_id and data
  *
  * to stop a script use the instance method stopBot and provide the bot_id
@@ -128,9 +127,10 @@ function initBot(spawner, botDirectory, scriptPath) {
  *
  * to restart a script use the instance method restartBot and provide the bot_id
  */
-function BotSpawner(options) {
+function BotSpawner(options, daos) {
     EventEmitter.call(this);
 
+    this.daos = daos;
     options = options || {};
     const self = this;
     let botDir = options.botDir || config.botDir;
@@ -138,6 +138,9 @@ function BotSpawner(options) {
     this.heartBeatInterval = options.heartBeatInterval || 2000; // by default, wait two seconds to send heartbeat
 
     fs.readdir(botDir, function(err, files) {
+        if (err) {
+            throw err;
+        }
         files
             .filter(fname => fname.endsWith('.py'))
             .forEach(fname => {
@@ -152,7 +155,7 @@ function BotSpawner(options) {
             // maybe listen here for a message of type shutdown-confirm that has
             // the same botId
             this.spawnedChildren[botId].running = false;
-            exchangeDAO.updateExchangeRunningState(botId, false);
+            this.daos.exchangeDAO.updateExchangeRunningState(botId, false);
         }
     }
 
@@ -181,9 +184,18 @@ util.inherits(BotSpawner, EventEmitter);
 
 var _bs = null;
 
-module.exports = function (config) {
-    if (_bs === null) {
-        _bs = new BotSpawner(config || {});
+/*
+ * daos is an object that contains initialized instances of data access objects
+ */
+module.exports = function (config, use_singleton, daos) {
+    /* use singleton by default, otherwise, for testing, construct new obj  */
+    use_singleton = use_singleton === undefined ? true: use_singleton;
+    if (use_singleton) {
+        if (_bs === null) {
+            _bs = new BotSpawner(config || {}, daos);
+        }
+        return _bs;
+    } else {
+        return new BotSpawner(config || {}, daos);
     }
-    return _bs;
 }
