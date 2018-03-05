@@ -3,8 +3,8 @@ import logging
 
 
 class BasicStrategy(Strategy):
-    def __init__(self, exchange):
-        super().__init__(exchange)
+    def __init__(self, exchange, params):
+        super().__init__(exchange, params)
 
     def __str__(self):
         return "Basic"

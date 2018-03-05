@@ -18,8 +18,7 @@ class HitBTCExchange(Exchange):
         self.session.auth = (self.key, self.secret)
         self.symbols = symbols if not mock else ['ETHBTC', 'LTCBTC', 'ETCBTC']
         self.markets = {}
-        for s in self.symbols:
-            self.markets[s] = self.to_market(s)
+        self.markets = {s: self.to_market(s) for s in symbols}
 
     # Interface
     def bid(self, market, rate, quantity):
@@ -304,9 +303,6 @@ if __name__ == "__main__":
     config.read("../config.ini")
     b = HitBTCExchange(config["hitbtc"]['BaseUrl'], config['hitbtc']['Key'], config['hitbtc']['Secret'],
                        config['hitbtc']['Symbols'].split(','), False)
-    r = b._candles('LTCBTC', period='M1')
-    print_json(r[-1])
-    c = b.candles(b.markets['LTCBTC'])
-    t = c[-1].time
-    new = b.candles(b.markets['LTCBTC'], count=10, start=(datetime.datetime.utcnow() - datetime.timedelta(minutes=4)))
-    print(new)
+    # r = b._candles('LTCBTC', period='M1')
+    # print_json(r[-1])
+    print(b.markets)

@@ -21,13 +21,16 @@ class TradingBot(object):
                 config.read(fname)
                 wrapper_class = str_to_class(config[name]['Wrapper'])
                 strategy_class = str_to_class(config[name]['Strategy'])
+                symbols = config[name]['Symbols'].split(',')
                 exchange = wrapper_class(config[name]['BaseUrl'], config[name]['Key'], config[name]['Secret'],
-                                         config[name]['Symbols'].split(','), mock)
-                if config[name]['Strategy'].lower() in config.sections():
-                    strat_params = config[config[name]['Strategy'].lower()]
+                                         symbols, mock)
+                if config[name]['Strategy'] == 'SignalStrategy':
+                    market_configs = {s: config[name][s].split(',') for s in symbols}
+                    indicators = {ind: str_to_class(ind) for ind in config[name]['indicators'].split(',')}
+                    strategy = strategy_class(exchange, market_configs, indicators)
                 else:
-                    strat_params = None
-                strategy = strategy_class(exchange, strat_params)
+                    market_configs = {s: config[name].get(s, '').split(',') for s in symbols}
+                    strategy = strategy_class(exchange, market_configs)
             except Exception as e:
                 logging.exception("Error reading config file")
                 sys.exit(0)
@@ -115,6 +118,12 @@ class TradingBot(object):
         self.push(orderbooks, 'orderbooks')
         trades = {k: self.exchange.trades(v) for k,v in self.markets.items()}
         self.push(trades, 'trades')
+        if hasattr(self.exchange, 'position'):
+            positions = {k: self.exchange.position(v) for k,v in self.markets.items()}
+            self.push(positions, 'positions')
+        if hasattr(self.strategy, 'signals'):
+            signals = {k: self.strategy.signals(v) for k,v in self.markets.items()}
+            self.push(signals, 'signals')
 
     def pull(self):
         # pull commands from backend via stdin e.g. {"type": "markets", "data": {"ETH_BTC": "off"}}

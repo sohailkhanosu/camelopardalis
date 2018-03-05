@@ -73,3 +73,4 @@ class Candle(object):
         self.close = float(close) if close else None
         self.volume = float(volume) if volume else None
         self.time = time
+

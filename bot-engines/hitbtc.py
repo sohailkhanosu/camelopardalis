@@ -8,11 +8,7 @@ def main():
     logging.basicConfig(filename='hitbtc.log', level=logging.INFO, format='%(asctime)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
     b = TradingBot('hitbtc', config_path='config.ini', mock=False)
     try:
-        while True:
-            for m in b.markets.keys():
-                b.strategy.trade(b.markets[m])
-                time.sleep(2)
-        # b.run()
+        b.run()
     except (KeyboardInterrupt, SystemExit) as e:
         print(str(e))
         logging.info("Exiting program")
