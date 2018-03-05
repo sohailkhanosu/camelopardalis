@@ -279,12 +279,12 @@ class BitMEXExchange(Exchange):
         return r.status_code, r.json()
 
 
-if __name__ == "__main__":
-    config = configparser.ConfigParser(allow_no_value=True)
-    config.read("../config.ini")
-    b = BitMEXExchange(config["bitmex"]['BaseUrl'], config['bitmex']['Key'], config['bitmex']['Secret'],
-                       config['bitmex']['Symbols'].split(','), False)
-    r = b.position(b.markets['XBTJPY'])
-    print(r)
+# if __name__ == "__main__":
+#     config = configparser.ConfigParser(allow_no_value=True)
+#     config.read("../config.ini")
+#     b = BitMEXExchange(config["bitmex"]['BaseUrl'], config['bitmex']['Key'], config['bitmex']['Secret'],
+#                        config['bitmex']['Symbols'].split(','), False)
+#     r = b.position(b.markets['XBTJPY'])
+#     print(r)
 
 

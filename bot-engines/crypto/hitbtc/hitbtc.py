@@ -298,11 +298,11 @@ class HitBTCExchange(Exchange):
         return response.status_code, response.json()
 
 
-if __name__ == "__main__":
-    config = configparser.ConfigParser(allow_no_value=True)
-    config.read("../config.ini")
-    b = HitBTCExchange(config["hitbtc"]['BaseUrl'], config['hitbtc']['Key'], config['hitbtc']['Secret'],
-                       config['hitbtc']['Symbols'].split(','), False)
-    # r = b._candles('LTCBTC', period='M1')
-    # print_json(r[-1])
-    print(b.markets)
+# if __name__ == "__main__":
+#     config = configparser.ConfigParser(allow_no_value=True)
+#     config.read("../config.ini")
+#     b = HitBTCExchange(config["hitbtc"]['BaseUrl'], config['hitbtc']['Key'], config['hitbtc']['Secret'],
+#                        config['hitbtc']['Symbols'].split(','), False)
+#     # r = b._candles('LTCBTC', period='M1')
+#     # print_json(r[-1])
+#     print(b.markets)
