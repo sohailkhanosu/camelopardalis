@@ -1,7 +1,7 @@
 const WebSocket = require('ws');
-const bs = require('./botSpawner.js')();
 const store = require('./store');
-const ecDAO = require('./dao')(store).exchangeCollectionDAO;
+const daos = require('./dao')(store);
+const bs = require('./botSpawner.js')({}, true, daos);
 
 function clientHandler(ws, req) {
     function messageForwarder(message) {

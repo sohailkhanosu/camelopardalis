@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const store = require('../store');
-const dao = require('../dao')(store);
-const bs = require('../botSpawner')();
+const daos = require('../dao')(store);
+const bs = require('../botSpawner')({}, true, daos);
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
@@ -10,7 +10,7 @@ router.get('/', function(req, res, next) {
 });
 
 router.get('/state', function(req, res, next) {
-    dao.exchangeCollectionDAO.getStatus()
+    daos.exchangeCollectionDAO.getStatus()
         .then((data) => res.json(data));
 })
 
@@ -24,12 +24,12 @@ router.post('/state', function(req, res, next) {
             bs.stopBot(exchangeId);
         }
     });
-    dao.exchangeCollectionDAO.getStatus()
+    daos.exchangeCollectionDAO.getStatus()
         .then((data) => res.json(data));
 })
 
 router.get('/exchanges/:exchangeId', function(req, res, next) {
-    dao.getExchangeById(req.params.exchangeId)
+    daos.exchangeCollectionDAO.getExchangeById(req.params.exchangeId)
         .then(result => res.status(200).json(result))
         .catch(err => res.status(404).json({'error': `exchange with id ${req.params.exchangeId} not found`}));
 })
