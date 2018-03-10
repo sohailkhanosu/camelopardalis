@@ -65,14 +65,15 @@ class TradingBot(object):
             if self.turn_off.is_set():
                 logging.info("Cancelling trades")
                 self.exchange.cancel(all=True)
+                if hasattr(self.exchange, 'close_positions'):
+                    self.exchange.close_positions()
                 self.push([], 'active_orders')
                 return
             try:
                 if not self.msg_queue.empty():
                     msg = self.msg_queue.get()
                     self.process_msg(msg)
-                signal = self.execute_strategy()
-                # self.push(new_orders, "new_orders")
+                self.execute_strategy()
                 self.report()
             except Exception as e:
                 self.push(e, 'error')
@@ -128,6 +129,7 @@ class TradingBot(object):
     def pull(self):
         # pull commands from backend via stdin e.g. {"type": "markets", "data": {"ETH_BTC": "off"}}
         stream = self.input_with_timeout(10)
+        # stream = input()
         try:
             msg = json.loads(stream)
             if msg['type'] == 'ping':  # if heartbeat, immediately reply

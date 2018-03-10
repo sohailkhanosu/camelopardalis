@@ -71,6 +71,6 @@ class Candle(object):
         self.high = float(high) if high else None
         self.low = float(low) if low else None
         self.close = float(close) if close else None
-        self.volume = float(volume) if volume else None
+        self.volume = float(volume) if volume else 0
         self.time = time
 

@@ -35,7 +35,7 @@ class BitMEXExchange(Exchange):
     def ask(self, market, rate, quantity):
         try:
             if rate is None:
-                ord_type = 'Limit'
+                ord_type = 'Market'
             else:
                 ord_type = None
             status, data = self._order(market.symbol, side="Sell", price=rate, orderQty=quantity, ordType=ord_type)
@@ -67,10 +67,11 @@ class BitMEXExchange(Exchange):
         try:
             status, data = self._wallet()
             if status == 200:
-                currency = data['currency'].upper()
-                if data['currency'].upper() == 'XBT':
+                total = [d for d in data if d['transactType'] == 'Total'][-1]
+                currency = total['currency'].upper()
+                if total['currency'].upper() == 'XBT':
                     currency = 'BTC'
-                return {currency: Balance(data['amount'] / 100000000, 0)}
+                return {currency: Balance(total['walletBalance'] / 100000000, 0)}
             else:
                 raise Exception(data['error']['message'])
         except Exception as e:
@@ -152,6 +153,13 @@ class BitMEXExchange(Exchange):
         except Exception as e:
             logging.exception("Error in position function")
 
+    def close_positions(self):
+        try:
+            for m in self.markets.values():
+                self._close_position(m.symbol)
+        except Exception as e:
+            logging.exception("Error in close position function")
+
     # Data conversion
     def to_market(self, symbol):
         m = self.markets.get(symbol, None)
@@ -205,7 +213,7 @@ class BitMEXExchange(Exchange):
 
     # API Methods
     def _wallet(self):
-        r = requests.get(self.base_url + "/user/wallet/", auth=self.auth)
+        r = requests.get(self.base_url + "/user/walletSummary/", auth=self.auth)
         return r.status_code, r.json()
 
     def _instrument(self, symbol=None):
@@ -278,13 +286,21 @@ class BitMEXExchange(Exchange):
         r = requests.get(self.base_url + "/position/", data=payload, auth=self.auth)
         return r.status_code, r.json()
 
+    def _close_position(self, symbol):
+        payload = {"symbol": symbol,
+                   "ordType": "Market",
+                   "execInst": "Close"}
+        r = requests.post(self.base_url + "/order/", data=payload, auth=self.auth)
+        return r.status_code, r.json()
 
-# if __name__ == "__main__":
-#     config = configparser.ConfigParser(allow_no_value=True)
-#     config.read("../config.ini")
-#     b = BitMEXExchange(config["bitmex"]['BaseUrl'], config['bitmex']['Key'], config['bitmex']['Secret'],
-#                        config['bitmex']['Symbols'].split(','), False)
-#     r = b.position(b.markets['XBTJPY'])
-#     print(r)
+
+if __name__ == "__main__":
+    config = configparser.ConfigParser(allow_no_value=True)
+    config.read("../config.ini")
+    b = BitMEXExchange(config["bitmex"]['BaseUrl'], config['bitmex']['Key'], config['bitmex']['Secret'],
+                       config['bitmex']['Symbols'].split(','), False)
+    r = b._instrument("XBTJPY")
+    print_json(r[1])
+    # print(int(r[1]['amount'])/100000000)
 
 
