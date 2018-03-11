@@ -93,6 +93,12 @@ function initBot(spawner, botDirectory, scriptPath) {
             case 'orderbooks':
                 spawner.daos.exchangeDAO.updateOrderBooks(message.exchange, message.data);
                 break;
+            case 'positions':
+                spawner.daos.exchangeDAO.updatePositions(message.exchange, message.data);
+                break;
+            case 'signals':
+                spawner.daos.exchangeDAO.updateSignals(message.exchange, message.data);
+                break;
         }
     });
     botInstance.fd.on('error', function (message) {

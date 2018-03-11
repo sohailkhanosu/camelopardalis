@@ -26,6 +26,8 @@ RUN npm install
 
 RUN mkdir -p bot-engines
 COPY bot-engines/requirements.txt /usr/src/app/bot-engines/requirements.txt
+# install prereq ta-lib for python deps
+RUN wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz && tar xvf ta-lib-0.4.0-src.tar.gz && cd ta-lib && ./configure --prefix=/usr && make && make install
 RUN pip3 install -r /usr/src/app/bot-engines/requirements.txt
 
 COPY . /usr/src/app

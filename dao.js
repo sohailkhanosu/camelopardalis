@@ -38,6 +38,8 @@ class ExchangeCollectionDAO {
                 rv.data[exchangeId].activeOrders = this.store[exchangeId].orders || [];
                 rv.data[exchangeId].trades = this.store[exchangeId].trades || [];
                 rv.data[exchangeId].orderBooks = this.store[exchangeId].orderBooks || [];
+                rv.data[exchangeId].positions = this.store[exchangeId].positions || {};
+                rv.data[exchangeId].signals = this.store[exchangeId].signals || {};
             });
             /* typeify the message */
             rv.type = 'status-all';
@@ -143,6 +145,22 @@ class ExchangeDAO {
         this.findExchangeById(exchangeId)
             .then(exchange => {
                 exchange.trades = trades;
+            })
+            .catch(err => console.log(err))
+    }
+
+    updateSignals(exchangeId, signals) {
+        this.findExchangeById(exchangeId)
+            .then(exchange => {
+                exchange.signals = signals;
+            })
+            .catch(err => console.log(err))
+    }
+
+    updatePositions(exchangeId, positions) {
+        this.findExchangeById(exchangeId)
+            .then(exchange => {
+                exchange.positions = positions;
             })
             .catch(err => console.log(err))
     }
