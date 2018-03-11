@@ -10,6 +10,18 @@ Secret = SECRET
 Wrapper = HitBTCExchange
 Strategy = BasicStrategy
 Symbols = ETHBTC,LTCBTC
+
+[bitmex]
+BaseUrl = https://testnet.bitmex.com/api/v1
+Key = KEY
+Secret = SECRET
+Wrapper = BitMEXExchange
+Symbols = XBTUSD
+Strategy = SignalStrategy
+Indicators = RSI,MACD,STOCHRSI
+# market configurations: long_cap,short_cap,bin,long_score,short_score
+XBTUSD = 100,100,1,0,0
+
 ```
 
 ### The easy way:

@@ -1,6 +1,6 @@
 from crypto.engine import Exchange
 import requests
-from crypto.structs import Order, Trade, Market, Ticker, Balance, OrderBook, Entry
+from crypto.structs import Order, Trade, Market, Ticker, Balance, OrderBook, Entry, Candle
 import dateutil.parser
 import logging
 import configparser
@@ -15,13 +15,16 @@ class BitMEXExchange(Exchange):
         self.auth = APIKeyAuthWithExpires(key, secret)
         self.symbols = symbols
         self.markets = {}
-        for s in self.symbols:
-            self.markets[s] = self.to_market(s)
+        self.markets = {s: self.to_market(s) for s in symbols}
 
     # Interface
     def bid(self, market, rate, quantity):
         try:
-            status, data = self._order(market.symbol, side="Buy", price=rate, orderQty=quantity)
+            if rate is None:
+                ord_type = 'Market'
+            else:
+                ord_type = None
+            status, data = self._order(market.symbol, side="Buy", price=rate, orderQty=quantity, ordType=ord_type)
             if status == 200:
                 return self._to_order(data)
             else:
@@ -31,7 +34,11 @@ class BitMEXExchange(Exchange):
 
     def ask(self, market, rate, quantity):
         try:
-            status, data = self._order(market.symbol, side="Sell", price=rate, orderQty=quantity)
+            if rate is None:
+                ord_type = 'Market'
+            else:
+                ord_type = None
+            status, data = self._order(market.symbol, side="Sell", price=rate, orderQty=quantity, ordType=ord_type)
             if status == 200:
                 return self._to_order(data)
             else:
@@ -60,7 +67,11 @@ class BitMEXExchange(Exchange):
         try:
             status, data = self._wallet()
             if status == 200:
-                return {data['currency'].upper(): Balance(data['amount'], 0)}
+                total = [d for d in data if d['transactType'] == 'Total'][-1]
+                currency = total['currency'].upper()
+                if total['currency'].upper() == 'XBT':
+                    currency = 'BTC'
+                return {currency: Balance(total['walletBalance'] / 100000000, 0)}
             else:
                 raise Exception(data['error']['message'])
         except Exception as e:
@@ -119,17 +130,52 @@ class BitMEXExchange(Exchange):
         except Exception as e:
             logging.exception("Error in trades function")
 
+    def candles(self, market, start=None, limit=100):
+        try:
+            status, data = self._trades_bucketed(market.symbol, count=limit, startTime=start)
+            if status == 200:
+                candles = [self._to_candle(d) for d in data[::-1]]
+                return candles
+            else:
+                raise Exception(data['error']['message'])
+        except Exception as e:
+            logging.exception("Error in candles function")
+
+    def position(self, market):
+        try:
+            status, data = self._positions(market.symbol)
+            if status == 200:
+                if len(data) < 1:
+                    return 0
+                return data[0]['currentQty']
+            else:
+                raise Exception(data['error']['message'])
+        except Exception as e:
+            logging.exception("Error in position function")
+
+    def close_positions(self):
+        try:
+            for m in self.markets.values():
+                self._close_position(m.symbol)
+        except Exception as e:
+            logging.exception("Error in close position function")
+
     # Data conversion
     def to_market(self, symbol):
         m = self.markets.get(symbol, None)
         if not m:
             status, data = self._instrument(symbol)
             if status == 200:
-                m = Market(counter=data[0]['rootSymbol'], base='XBT', symbol=symbol, increment=data[0]['lotSize'],
-                           make_fee=data[0]['makerFee'], take_fee=data[0]['takerFee'])
+                counter = data[0]['positionCurrency']
+                if counter.upper() == 'XBT':
+                    counter = 'BTC'
+                base = data[0]['underlying']
+                if base.upper() == 'XBT':
+                    base = 'BTC'
+                m = Market(counter=counter, base=base, symbol=symbol,
+                           increment=data[0]['lotSize'], make_fee=data[0]['makerFee'], take_fee=data[0]['takerFee'])
             else:
                 raise Exception(data['error']['message'])
-
         return m
 
     def _to_order(self, data):
@@ -158,9 +204,16 @@ class BitMEXExchange(Exchange):
                         last=data['lastPrice'], base_volume=0, quote_volume=data['turnover'], time=time)
         return ticker
 
+    def _to_candle(self, data):
+        market = self.to_market(data['symbol'])
+        time = dateutil.parser.parse(data['timestamp'])
+        candle = Candle(market=market, open=data['open'], high=data['high'], low=data['low'],
+                       close=data['close'], volume=data['volume'], time=time)
+        return candle
+
     # API Methods
     def _wallet(self):
-        r = requests.get(self.base_url + "/user/wallet/", auth=self.auth)
+        r = requests.get(self.base_url + "/user/walletSummary/", auth=self.auth)
         return r.status_code, r.json()
 
     def _instrument(self, symbol=None):
@@ -217,11 +270,37 @@ class BitMEXExchange(Exchange):
         r = requests.get(self.base_url + "/trade/", data=payload, auth=self.auth)
         return r.status_code, r.json()
 
+    def _trades_bucketed(self, symbol=None, binSize='1m', count=None, start=None, reverse=True, partial=False,
+                         startTime=None, endTime=None):
+        payload = {k: v for (k, v) in locals().items() if v is not None and v != self}
+        payload['reverse'] = "true" if payload['reverse'] else "false"
+        payload['partial'] = "true" if payload['partial'] else "false"
+        if binSize not in ['1m', '5m', '1h', '1d']:
+            raise Exception('Invalid binSize')
+        r = requests.get(self.base_url + "/trade/bucketed", data=payload)
+        return r.status_code, r.json()
+
+    def _positions(self, symbol):
+        payload = {}
+        payload['filter'] = json.dumps({"symbol": symbol})
+        r = requests.get(self.base_url + "/position/", data=payload, auth=self.auth)
+        return r.status_code, r.json()
+
+    def _close_position(self, symbol):
+        payload = {"symbol": symbol,
+                   "ordType": "Market",
+                   "execInst": "Close"}
+        r = requests.post(self.base_url + "/order/", data=payload, auth=self.auth)
+        return r.status_code, r.json()
+
 
 if __name__ == "__main__":
     config = configparser.ConfigParser(allow_no_value=True)
     config.read("../config.ini")
     b = BitMEXExchange(config["bitmex"]['BaseUrl'], config['bitmex']['Key'], config['bitmex']['Secret'],
                        config['bitmex']['Symbols'].split(','), False)
-    r = b._instrument("XRPH18")
+    r = b._instrument("XBTJPY")
     print_json(r[1])
+    # print(int(r[1]['amount'])/100000000)
+
+

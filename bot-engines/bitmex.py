@@ -1,6 +1,7 @@
 from crypto import TradingBot
 import sys
 import logging
+import time
 
 
 def main():

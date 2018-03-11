@@ -6,3 +6,4 @@ requests==2.18.4
 requests-mock==1.4.0
 six==1.11.0
 urllib3==1.22
+TA-Lib==0.4.16

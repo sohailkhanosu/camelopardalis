@@ -1,6 +1,7 @@
 from crypto import TradingBot
 import sys
 import logging
+import time
 
 
 def main():
@@ -9,7 +10,6 @@ def main():
     try:
         b.run()
     except (KeyboardInterrupt, SystemExit) as e:
-        print(str(e))
         logging.info("Exiting program")
         b.exchange.cancel(all=True)  # cancel orders one more time just to be sure
         b.push([], 'active_orders')

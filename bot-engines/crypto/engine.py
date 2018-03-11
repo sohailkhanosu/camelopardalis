@@ -21,17 +21,26 @@ class TradingBot(object):
                 config.read(fname)
                 wrapper_class = str_to_class(config[name]['Wrapper'])
                 strategy_class = str_to_class(config[name]['Strategy'])
+                symbols = config[name]['Symbols'].split(',')
                 exchange = wrapper_class(config[name]['BaseUrl'], config[name]['Key'], config[name]['Secret'],
-                                         config[name]['Symbols'].split(','), mock)
-                strategy = strategy_class(exchange)
+                                         symbols, mock)
+                if config[name]['Strategy'] == 'SignalStrategy':
+                    market_configs = {s: config[name][s].split(',') for s in symbols}
+                    indicators = {ind: str_to_class(ind) for ind in config[name]['indicators'].split(',')}
+                    strategy = strategy_class(exchange, market_configs, indicators)
+                else:
+                    market_configs = {s: config[name].get(s, '').split(',') for s in symbols}
+                    strategy = strategy_class(exchange, market_configs)
             except Exception as e:
                 logging.exception("Error reading config file")
                 sys.exit(0)
         self.name = name
         self.exchange = exchange
         self.strategy = strategy
+
         self.markets = {m.counter + '_' + m.base: m for m in list(map(self.exchange.to_market, self.exchange.symbols))}
         self.markets_on = {m: True for m in self.markets.keys()}
+
         self.msg_queue = Queue(maxsize=10)
         self.turn_off = threading.Event()
         self.work_thread = None
@@ -56,14 +65,15 @@ class TradingBot(object):
             if self.turn_off.is_set():
                 logging.info("Cancelling trades")
                 self.exchange.cancel(all=True)
+                if hasattr(self.exchange, 'close_positions'):
+                    self.exchange.close_positions()
                 self.push([], 'active_orders')
                 return
             try:
                 if not self.msg_queue.empty():
                     msg = self.msg_queue.get()
                     self.process_msg(msg)
-                new_orders = self.execute_strategy()
-                # self.push(new_orders, "new_orders")
+                self.execute_strategy()
                 self.report()
             except Exception as e:
                 self.push(e, 'error')
@@ -109,10 +119,17 @@ class TradingBot(object):
         self.push(orderbooks, 'orderbooks')
         trades = {k: self.exchange.trades(v) for k,v in self.markets.items()}
         self.push(trades, 'trades')
+        if hasattr(self.exchange, 'position'):
+            positions = {k: self.exchange.position(v) for k,v in self.markets.items()}
+            self.push(positions, 'positions')
+        if hasattr(self.strategy, 'signals'):
+            signals = {k: self.strategy.signals(v) for k,v in self.markets.items()}
+            self.push(signals, 'signals')
 
     def pull(self):
         # pull commands from backend via stdin e.g. {"type": "markets", "data": {"ETH_BTC": "off"}}
         stream = self.input_with_timeout(10)
+        # stream = input()
         try:
             msg = json.loads(stream)
             if msg['type'] == 'ping':  # if heartbeat, immediately reply
@@ -193,9 +210,13 @@ class Exchange(abc.ABC):
     def market_trades(self, market):
         pass
 
+    @abc.abstractmethod
+    def candles(self, market):
+        pass
+
 
 class Strategy(object):
-    def __init__(self, exchange):
+    def __init__(self, exchange, params):
         self.exchange = exchange
 
     @abc.abstractmethod
