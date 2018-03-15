@@ -8,7 +8,7 @@ from collections import namedtuple
 import datetime as dt
 import abc
 import time
-
+import csv
 
 class SignalConfig:
     def __init__(self, *args):
@@ -199,7 +199,7 @@ def AROON_OSCILLATOR(inputs):
     sma_volume = calculate_sma(inputs, timeperiod=50, price='volume')
 
     r = Result(
-        aroon_last=aroon_osc[-1],
+        aroon_last=aroon_osc[-2],
         aroon=aroon_osc[-1],
         sma_volume=sma_volume[-1],
         volume=inputs['volume'][-1]
@@ -218,9 +218,9 @@ def MFI(inputs):
     mfi = calculate_mfi(inputs)[-1]
 
     indicator = 0
-    if mfi < 20:
+    if mfi < 10:
         indicator = 1
-    elif mfi > 80:
+    elif mfi > 90:
         indicator = -1
     return indicator
 

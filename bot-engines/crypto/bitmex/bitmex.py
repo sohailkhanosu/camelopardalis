@@ -7,6 +7,7 @@ import configparser
 import json
 from crypto.bitmex.auth import APIKeyAuthWithExpires
 from crypto.helpers import print_json
+import time
 
 
 class BitMEXExchange(Exchange):
@@ -56,7 +57,7 @@ class BitMEXExchange(Exchange):
                 orders = list(map(self._to_order, data))
             elif order_id:
                 status, data = self._cancel(order_id)
-                orders = [self._to_order(data)]
+                orders = list(map(self._to_order, data))
             else:
                 raise Exception('Specify order_id, market, or all')
             return orders
@@ -92,6 +93,7 @@ class BitMEXExchange(Exchange):
     def order_book(self, market):
         try:
             status, data = self._order_book(market.symbol)
+
             asks = [Entry(d['price'], d['size']) for d in data if d['side'] == 'Sell']
             bids = [Entry(d['price'], d['size']) for d in data if d['side'] == 'Buy']
             orderbook = OrderBook(asks, bids)
@@ -115,9 +117,6 @@ class BitMEXExchange(Exchange):
                 raise Exception(data['error']['message'])
         except Exception as e:
             logging.exception("Error in ticker function")
-
-    def market_trades(self, market):
-        pass
 
     def trades(self, market):
         try:
@@ -214,11 +213,13 @@ class BitMEXExchange(Exchange):
     # API Methods
     def _wallet(self):
         r = requests.get(self.base_url + "/user/walletSummary/", auth=self.auth)
+        self._control_rate(r)
         return r.status_code, r.json()
 
     def _instrument(self, symbol=None):
         payload = {k: v for (k, v) in locals().items() if v is not None and v != self}
         r = requests.get(self.base_url + "/instrument/", data=payload, auth=self.auth)
+        self._control_rate(r)
         return r.status_code, r.json()
 
     def _order(self, symbol, side, orderQty, price, timeInForce=None, ordType=None, stopPx=None):
@@ -233,6 +234,7 @@ class BitMEXExchange(Exchange):
         if not stopPx and payload.get('type', '').startswith('Stop'):
             raise Exception("Stop price required for stop types")
         response = requests.post(self.base_url + '/order', data=payload, auth=self.auth)
+        self._control_rate(response)
         return response.status_code, response.json()
 
     def _cancel(self, orderID=None, clOrdID=None):
@@ -240,34 +242,40 @@ class BitMEXExchange(Exchange):
         if not len(payload.keys()):
             raise Exception("Order id or client order id required")
         response = requests.delete(self.base_url + '/order', data=payload, auth=self.auth)
+        self._control_rate(response)
         return response.status_code, response.json()
 
     def _cancel_all(self, symbol=None):
         payload = {k: v for (k, v) in locals().items() if v is not None and v != self}
         response = requests.delete(self.base_url + '/order/all', data=payload, auth=self.auth)
+        self._control_rate(response)
         return response.status_code, response.json()
 
     def _order_book(self, symbol=None, depth=10):
         payload = {k: v for (k, v) in locals().items() if v is not None and v != self}
         payload['filter'] = json.dumps({"ordStatus": "Filled"})
         r = requests.get(self.base_url + "/orderBook/L2", data=payload, auth=self.auth)
+        self._control_rate(r)
         return r.status_code, r.json()
 
     def _active_orders(self, symbol=None):
         payload = {k: v for (k, v) in locals().items() if v is not None and v != self}
         payload['filter'] = json.dumps({"open": "true"})
         r = requests.get(self.base_url + "/order/", data=payload, auth=self.auth)
+        self._control_rate(r)
         return r.status_code, r.json()
 
     def _filled_orders(self, symbol=None):
         payload = {k: v for (k, v) in locals().items() if v is not None and v != self}
         payload['filter'] = json.dumps({"ordStatus": "Filled"})
         r = requests.get(self.base_url + "/order/", data=payload, auth=self.auth)
+        self._control_rate(r)
         return r.status_code, r.json()
 
     def _trades(self, symbol=None):
         payload = {k: v for (k, v) in locals().items() if v is not None and v != self}
         r = requests.get(self.base_url + "/trade/", data=payload, auth=self.auth)
+        self._control_rate(r)
         return r.status_code, r.json()
 
     def _trades_bucketed(self, symbol=None, binSize='1m', count=None, start=None, reverse=True, partial=False,
@@ -278,12 +286,14 @@ class BitMEXExchange(Exchange):
         if binSize not in ['1m', '5m', '1h', '1d']:
             raise Exception('Invalid binSize')
         r = requests.get(self.base_url + "/trade/bucketed", data=payload)
+        self._control_rate(r)
         return r.status_code, r.json()
 
     def _positions(self, symbol):
         payload = {}
         payload['filter'] = json.dumps({"symbol": symbol})
         r = requests.get(self.base_url + "/position/", data=payload, auth=self.auth)
+        self._control_rate(r)
         return r.status_code, r.json()
 
     def _close_position(self, symbol):
@@ -291,7 +301,17 @@ class BitMEXExchange(Exchange):
                    "ordType": "Market",
                    "execInst": "Close"}
         r = requests.post(self.base_url + "/order/", data=payload, auth=self.auth)
+        self._control_rate(r)
         return r.status_code, r.json()
+
+    def _control_rate(self, res):
+        try:
+            if int(res.headers['x-ratelimit-remaining']) < 50:
+                time.sleep(20)
+            else:
+                time.sleep(.2)
+        except:
+            time.sleep(5)
 
 
 if __name__ == "__main__":

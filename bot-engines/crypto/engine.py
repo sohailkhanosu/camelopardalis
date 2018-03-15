@@ -10,7 +10,7 @@ import os
 import logging
 import signal
 import sys
-
+import csv
 
 class TradingBot(object):
     def __init__(self, name, exchange=None, strategy=None, config_path=None, mock=True):
@@ -21,9 +21,11 @@ class TradingBot(object):
                 config.read(fname)
                 wrapper_class = str_to_class(config[name]['Wrapper'])
                 strategy_class = str_to_class(config[name]['Strategy'])
+                self.timeout_enabled = config[name].getboolean('Timeout')
                 symbols = config[name]['Symbols'].split(',')
                 exchange = wrapper_class(config[name]['BaseUrl'], config[name]['Key'], config[name]['Secret'],
                                          symbols, mock)
+
                 if config[name]['Strategy'] == 'SignalStrategy':
                     market_configs = {s: config[name][s].split(',') for s in symbols}
                     indicators = {ind: str_to_class(ind) for ind in config[name]['indicators'].split(',')}
@@ -53,7 +55,7 @@ class TradingBot(object):
         self.work_thread.daemon = True
         self.work_thread.start()
 
-        while time.time() < self.end_time:
+        while time.time() < self.end_time or not self.timeout_enabled:
             self.pull()
         self.turn_off.set()
         logging.info("Timeout")
@@ -128,8 +130,8 @@ class TradingBot(object):
 
     def pull(self):
         # pull commands from backend via stdin e.g. {"type": "markets", "data": {"ETH_BTC": "off"}}
-        stream = self.input_with_timeout(10)
-        # stream = input()
+        # stream = self.input_with_timeout(10)
+        stream = input()
         try:
             msg = json.loads(stream)
             if msg['type'] == 'ping':  # if heartbeat, immediately reply
@@ -204,10 +206,6 @@ class Exchange(abc.ABC):
 
     @abc.abstractmethod
     def ticker(self, market=None):
-        pass
-
-    @abc.abstractmethod
-    def market_trades(self, market):
         pass
 
     @abc.abstractmethod
