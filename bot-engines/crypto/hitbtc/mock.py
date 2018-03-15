@@ -145,8 +145,8 @@ class Mocker(object):
         symbol = request._request.url.split('/')[-1]
         if symbol != 'symbol' and symbol != '':
             response = {
-                "quoteCurrency": symbol[:len(symbol)//2],
-                "baseCurrency": symbol[len(symbol)//2:],
+                "quoteCurrency": symbol[len(symbol)//2:],
+                "baseCurrency": symbol[:len(symbol)//2],
                 "quantityIncrement": .001,
                 "provideLiquidityRate": 0,
                 "takeLiquidityRate": 0

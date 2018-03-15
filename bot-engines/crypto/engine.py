@@ -14,19 +14,20 @@ import csv
 
 
 class TradingBot(object):
-    def __init__(self, name, exchange=None, strategy=None, config_path=None, mock=True):
+    def __init__(self, name, exchange=None, strategy=None, config_path=None, mock=None):
         if config_path:
             try:
                 config = configparser.ConfigParser(allow_no_value=True)
                 fname = os.path.join(os.path.dirname(__file__), 'config.ini')
                 config.read(fname)
+                if mock is None:
+                    mock = config[name].getboolean('Mock', fallback=True)
                 wrapper_class = str_to_class(config[name]['Wrapper'])
                 strategy_class = str_to_class(config[name]['Strategy'])
-                self.timeout_enabled = config[name].getboolean('Timeout')
+                self.minutes_to_timeout = int(config[name]['MinutesToTimeout'])
                 symbols = config[name]['Symbols'].split(',')
                 exchange = wrapper_class(config[name]['BaseUrl'], config[name]['Key'], config[name]['Secret'],
                                          symbols, mock)
-
                 if config[name]['Strategy'] == 'SignalStrategy':
                     market_configs = {s: config[name][s].split(',') for s in symbols}
                     indicators = {ind: str_to_class(ind) for ind in config[name]['indicators'].split(',')}
@@ -47,7 +48,7 @@ class TradingBot(object):
         self.msg_queue = Queue(maxsize=10)
         self.turn_off = threading.Event()
         self.work_thread = None
-        self.end_time = time.time() + (60 * 5)  # 5 minute timeout
+        self.end_time = time.time() + (60 * self.minutes_to_timeout)
         signal.signal(signal.SIGINT, self.sig_handler)
 
     def run(self):

@@ -100,7 +100,7 @@ class SignalStrategy(Strategy):
         cap_buffer = self.cfg[market.symbol].long_qty_cap - position
         funds = self.mid_spread(book) * balance[market.base].available * 0.9
         quantity = min(funds, self.cfg[market.symbol].lot_qty, cap_buffer)
-        if quantity > market.increment:
+        if quantity >= market.increment:
             logging.info("Increasing long position from {} to {} in {} market...".format(position, position+quantity, market.symbol))
             self.exchange.bid(market=market, rate=None, quantity=quantity)
 

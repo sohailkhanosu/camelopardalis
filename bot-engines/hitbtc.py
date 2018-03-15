@@ -6,7 +6,7 @@ import time
 
 def main():
     logging.basicConfig(filename='hitbtc.log', level=logging.INFO, format='%(asctime)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
-    b = TradingBot('hitbtc', config_path='config.ini', mock=False)
+    b = TradingBot('hitbtc', config_path='config.ini')
     try:
         b.run()
     except (KeyboardInterrupt, SystemExit) as e:
