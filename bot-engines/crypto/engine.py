@@ -12,6 +12,7 @@ import signal
 import sys
 import csv
 
+
 class TradingBot(object):
     def __init__(self, name, exchange=None, strategy=None, config_path=None, mock=True):
         if config_path:
@@ -130,8 +131,8 @@ class TradingBot(object):
 
     def pull(self):
         # pull commands from backend via stdin e.g. {"type": "markets", "data": {"ETH_BTC": "off"}}
-        # stream = self.input_with_timeout(10)
-        stream = input()
+        stream = self.input_with_timeout(10)
+        # stream = input()
         try:
             msg = json.loads(stream)
             if msg['type'] == 'ping':  # if heartbeat, immediately reply
