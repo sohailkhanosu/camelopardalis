@@ -28,12 +28,11 @@ class TradingBot(object):
                 symbols = config[name]['Symbols'].split(',')
                 exchange = wrapper_class(config[name]['BaseUrl'], config[name]['Key'], config[name]['Secret'],
                                          symbols, mock)
+                market_configs = {s: config[name][s].split(',') for s in symbols}
                 if config[name]['Strategy'] == 'SignalStrategy':
-                    market_configs = {s: config[name][s].split(',') for s in symbols}
                     indicators = {ind: str_to_class(ind) for ind in config[name]['indicators'].split(',')}
                     strategy = strategy_class(exchange, market_configs, indicators)
                 else:
-                    market_configs = {s: config[name].get(s, '').split(',') for s in symbols}
                     strategy = strategy_class(exchange, market_configs)
             except Exception as e:
                 logging.exception("Error reading config file")

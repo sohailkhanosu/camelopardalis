@@ -14,11 +14,15 @@ MinutesToTimeout = 5
 Wrapper = HitBTCExchange
 Strategy = BasicStrategy
 Symbols = ETHBTC,LTCBTC,ETCBTC
+# market configurations: spread
+ETHBTC = .016
+ETCBTC = .016
+LTCBTC = .016
 
 [bitmex]
 BaseUrl = https://testnet.bitmex.com/api/v1
-Key = KEY
-Secret = SECRET
+Key = E_5zqwA8lVold173uCVeUDiC
+Secret = OAR3KepUl26c7n-dwlzFclJJ-hq1hW3ZAep3JVrpPhoZCrm5
 Mock = False
 MinutesToTimeout = 60
 Wrapper = BitMEXExchange
@@ -28,6 +32,7 @@ Indicators = RSI,MACD,STOCHRSI,AROON_OSCILLATOR,MFI,CCI,CMO,MACD_HIST,WILLR
 # market configurations: long_cap,short_cap,bin,long_score,short_score,min_volume
 XBTUSD = 1000,1000,100,.15,-.15,10
 XBTJPY = 1000,1000,100,.15,-.15,10
+
 ```
 
 ### The easy way:

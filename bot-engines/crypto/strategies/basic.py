@@ -5,6 +5,7 @@ import logging
 class BasicStrategy(Strategy):
     def __init__(self, exchange, params):
         super().__init__(exchange, params)
+        self.spreads = {k: float(v[0]) for k, v in params.items()}
 
     def __str__(self):
         return "Basic"
@@ -23,7 +24,7 @@ class BasicStrategy(Strategy):
     def trade(self, market):
         self.exchange.cancel(market=market)  # cancel previous orders in this market
         market_value = round(self.analyze_market(market), 8)
-        spread = market_value * .1
+        spread = market_value * self.spreads[market.symbol]
         ask_quote = round(market_value + (spread / 2), 8)
         bid_quote = round(market_value - (spread / 2), 8)
         min_qty = market.increment
