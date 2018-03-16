@@ -152,7 +152,7 @@ class TradingBot(object):
         }
         msg = json.dumps(payload, default=serialize_obj)
 
-        if len(msg) < 200000:
+        if len(msg) < 20000:
             print(msg, flush=True)
         else:
             logging.info("Payload too long")
