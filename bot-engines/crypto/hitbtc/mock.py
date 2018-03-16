@@ -28,7 +28,7 @@ class Mocker(object):
             o = random.choice(self.active_orders)
             self.active_orders.remove(o)
             self.trades[o['symbol']].append(self.to_trade(o))
-            self.trades[o['symbol']] = self.trades[o['symbol']][-5:]
+            self.trades[o['symbol']] = self.trades[o['symbol']][-50:]
         return json.dumps(self.active_orders)
 
     def order(self, request, context):
@@ -145,8 +145,8 @@ class Mocker(object):
         symbol = request._request.url.split('/')[-1]
         if symbol != 'symbol' and symbol != '':
             response = {
-                "quoteCurrency": symbol[:len(symbol)//2],
-                "baseCurrency": symbol[len(symbol)//2:],
+                "quoteCurrency": symbol[len(symbol)//2:],
+                "baseCurrency": symbol[:len(symbol)//2],
                 "quantityIncrement": .001,
                 "provideLiquidityRate": 0,
                 "takeLiquidityRate": 0

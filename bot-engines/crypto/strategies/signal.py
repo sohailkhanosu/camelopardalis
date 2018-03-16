@@ -8,7 +8,7 @@ from collections import namedtuple
 import datetime as dt
 import abc
 import time
-
+import csv
 
 class SignalConfig:
     def __init__(self, *args):
@@ -100,7 +100,7 @@ class SignalStrategy(Strategy):
         cap_buffer = self.cfg[market.symbol].long_qty_cap - position
         funds = self.mid_spread(book) * balance[market.base].available * 0.9
         quantity = min(funds, self.cfg[market.symbol].lot_qty, cap_buffer)
-        if quantity > market.increment:
+        if quantity >= market.increment:
             logging.info("Increasing long position from {} to {} in {} market...".format(position, position+quantity, market.symbol))
             self.exchange.bid(market=market, rate=None, quantity=quantity)
 
@@ -112,7 +112,7 @@ class SignalStrategy(Strategy):
         cap_buffer = self.cfg[market.symbol].short_qty_cap + position
         funds = self.mid_spread(book) * balance[market.base].available * 0.9
         quantity = min(funds, self.cfg[market.symbol].lot_qty, cap_buffer)
-        if quantity > market.increment:
+        if quantity >= market.increment:
             logging.info("Increasing short position from {} to {} in {} market...".format(position, position-quantity, market.symbol))
             self.exchange.ask(market=market, rate=None, quantity=quantity)
 
@@ -199,7 +199,7 @@ def AROON_OSCILLATOR(inputs):
     sma_volume = calculate_sma(inputs, timeperiod=50, price='volume')
 
     r = Result(
-        aroon_last=aroon_osc[-1],
+        aroon_last=aroon_osc[-2],
         aroon=aroon_osc[-1],
         sma_volume=sma_volume[-1],
         volume=inputs['volume'][-1]
@@ -218,9 +218,9 @@ def MFI(inputs):
     mfi = calculate_mfi(inputs)[-1]
 
     indicator = 0
-    if mfi < 20:
+    if mfi < 10:
         indicator = 1
-    elif mfi > 80:
+    elif mfi > 90:
         indicator = -1
     return indicator
 

@@ -108,17 +108,6 @@ class HitBTCExchange(Exchange):
         except Exception as e:
             logging.exception("Error in ticker function")
 
-    def market_trades(self, market):
-        try:
-            status, data = self._trades(market.symbol)
-            if status == 200:
-                trades = [self._to_trade(d, market) for d in data]
-                return trades
-            else:
-                raise Exception(data['error']['message'])
-        except Exception as e:
-            logging.exception("Error in market_trades function")
-
     def trades(self, market):
         try:
             status, data = self._history_trades(market.symbol)
