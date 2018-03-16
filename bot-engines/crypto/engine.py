@@ -57,7 +57,7 @@ class TradingBot(object):
         self.work_thread.daemon = True
         self.work_thread.start()
 
-        while time.time() < self.end_time or not self.timeout_enabled:
+        while time.time() < self.end_time:
             self.pull()
         self.turn_off.set()
         logging.info("Timeout")
@@ -151,7 +151,12 @@ class TradingBot(object):
             'data': data,
             'nonce': ''.join([str(random.randint(0, 9)) for _ in range(10)])
         }
-        print(json.dumps(payload, default=serialize_obj), flush=True)
+        msg = json.dumps(payload, default=serialize_obj)
+
+        if len(msg) < 200000:
+            print(msg, flush=True)
+        else:
+            logging.info("Payload too long")
 
     def input_with_timeout(self, timeout):
         # set signal handler

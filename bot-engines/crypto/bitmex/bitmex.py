@@ -82,8 +82,8 @@ class BitMEXExchange(Exchange):
         try:
             symbol = market.symbol if market else ''
             status, data = self._active_orders(symbol)
-            orders = list(map(self._to_order, data))
             if status == 200:
+                orders = list(map(self._to_order, data))
                 return orders
             else:
                 raise Exception(data['error']['message'])
@@ -93,11 +93,10 @@ class BitMEXExchange(Exchange):
     def order_book(self, market):
         try:
             status, data = self._order_book(market.symbol)
-
-            asks = [Entry(d['price'], d['size']) for d in data if d['side'] == 'Sell']
-            bids = [Entry(d['price'], d['size']) for d in data if d['side'] == 'Buy']
-            orderbook = OrderBook(asks, bids)
             if status == 200:
+                asks = [Entry(d['price'], d['size']) for d in data if d['side'] == 'Sell']
+                bids = [Entry(d['price'], d['size']) for d in data if d['side'] == 'Buy']
+                orderbook = OrderBook(asks, bids)
                 return orderbook
             else:
                 raise Exception(data['error']['message'])
@@ -121,9 +120,8 @@ class BitMEXExchange(Exchange):
     def trades(self, market):
         try:
             status, data = self._filled_orders(market.symbol)
-
-            trades = [self._to_trade(d, market) for d in data]
             if status == 200:
+                trades = [self._to_trade(d, market) for d in data]
                 return trades
             else:
                 raise Exception(data['error']['message'])
