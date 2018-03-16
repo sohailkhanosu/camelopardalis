@@ -121,6 +121,7 @@ class BitMEXExchange(Exchange):
     def trades(self, market):
         try:
             status, data = self._filled_orders(market.symbol)
+
             trades = [self._to_trade(d, market) for d in data]
             if status == 200:
                 return trades
@@ -265,7 +266,7 @@ class BitMEXExchange(Exchange):
         self._control_rate(r)
         return r.status_code, r.json()
 
-    def _filled_orders(self, symbol=None):
+    def _filled_orders(self, symbol=None, count=100):
         payload = {k: v for (k, v) in locals().items() if v is not None and v != self}
         payload['filter'] = json.dumps({"ordStatus": "Filled"})
         r = requests.get(self.base_url + "/order/", data=payload, auth=self.auth)
@@ -314,13 +315,13 @@ class BitMEXExchange(Exchange):
             time.sleep(5)
 
 
-if __name__ == "__main__":
-    config = configparser.ConfigParser(allow_no_value=True)
-    config.read("../config.ini")
-    b = BitMEXExchange(config["bitmex"]['BaseUrl'], config['bitmex']['Key'], config['bitmex']['Secret'],
-                       config['bitmex']['Symbols'].split(','), False)
-    r = b._instrument("XBTJPY")
-    print_json(r[1])
-    # print(int(r[1]['amount'])/100000000)
+# if __name__ == "__main__":
+#     config = configparser.ConfigParser(allow_no_value=True)
+#     config.read("../config.ini")
+#     b = BitMEXExchange(config["bitmex"]['BaseUrl'], config['bitmex']['Key'], config['bitmex']['Secret'],
+#                        config['bitmex']['Symbols'].split(','), False)
+#     r = b.position(b.markets['XBTJPY'])
+#     print(r)
+#     # print(int(r[1]['amount'])/100000000)
 
 
