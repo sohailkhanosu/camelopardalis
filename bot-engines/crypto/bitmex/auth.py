@@ -4,6 +4,8 @@ import hmac
 from urllib.parse import urlparse
 
 
+# From BitMEX API sample code:
+# https://github.com/BitMEX/sample-market-maker/blob/master/market_maker/auth/APIKeyAuthWithExpires.py
 class APIKeyAuthWithExpires(object):
     """Attaches API Key Authentication to the given Request object. This implementation uses `expires`."""
     def __init__(self, apiKey, apiSecret):
@@ -24,6 +26,7 @@ class APIKeyAuthWithExpires(object):
         r.headers['api-signature'] = self.generate_signature(self.apiSecret, r.method, r.url, expires, r.body or '')
         return r
 
+    # From BitMEX API Documentation: https://www.bitmex.com/app/apiKeysUsage
     # Generates an API signature.
     # A signature is HMAC_SHA256(secret, verb + path + expires + data), hex encoded.
     # Verb must be uppercased, url is relative, nonce must be an increasing 64-bit integer
