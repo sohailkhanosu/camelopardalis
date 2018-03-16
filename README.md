@@ -2,6 +2,8 @@
 
 If running locally without docker, you will need node v9.5.0 and Python 3.6.  You will also need to specify the configuration (we will not provide credentials to access the live exchanges). The following is an example of an `config.ini` file. This needs to be placed in the `bot-engines/crypto` directory.
 
+For persistence, this project uses google cloud storage. You will need to get service credentials from the google console to build the project. For the submission, a file called `camelopardalis-service-key.json` will be provided. This file should already be placed in the root of the project (directory containing `Dockerfile`). To enable persistence, set the `useCloudStorage` setting to `true` and set the environment variable `GOOGLE_APPLICATION_CREDENTIALS=/camelopardalis-service-key.json`.
+
 ```
 [hitbtc]
 BaseUrl = https://api.hitbtc.com/api/2
