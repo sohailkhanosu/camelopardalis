@@ -111,8 +111,9 @@ function initBot(spawner, botDirectory, scriptPath) {
     /* start the heartbeat to ensure continuous connection */
     startHeartBeat(botInstance, spawner.heartBeatInterval, spawner.daos);
 
-    /* register the exchange data */
-    spawner.daos.exchangeCollectionDAO.addExchange(botInstance.id);
+    /* register the exchange data, if its not found */
+    spawner.daos.findExchangeById(botInstance.id)
+        .catch(() => spawner.daos.exchangeCollectionDAO.addExchange(botInstance.id));
     spawner.daos.exchangeDAO.updateExchangeRunningState(botInstance.id, botInstance.running);
 }
 

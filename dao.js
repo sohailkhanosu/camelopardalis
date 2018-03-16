@@ -9,7 +9,7 @@ class ExchangeCollectionDAO {
         /* add the exchange to the list of supported exchanges */
         return new Promise((resolve, reject) => {
             if (! this.store.hasOwnProperty(exchangeId)) {
-                this.store[exchangeId] = {};
+                this.store[exchangeId] = {balances: {btc: 0}};
                 resolve(this.store[exchangeId]);
             }
             reject('already added exchange: ' + exchangeId);
