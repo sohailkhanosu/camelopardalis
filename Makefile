@@ -10,7 +10,7 @@ all:
 run-docker:
 	@echo "building image..."
 	@docker build -t ${IMAGE_NAME} .
-	docker run --rm -p "3000:3000" ${IMAGE_NAME}
+	docker run --rm -p "3000:80" ${IMAGE_NAME}
 
 
 .PHONY: deploy-image

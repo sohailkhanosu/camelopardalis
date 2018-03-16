@@ -43,5 +43,6 @@ RUN export CLOUD_SDK_REPO="cloud-sdk-wheezy" \
 COPY . /usr/src/app
 
 ENV GOOGLE_APPLICATION_CREDENTIALS=/camelopardalis-service-key.json
-EXPOSE 3000
+ENV PORT=80
+EXPOSE ${PORT}
 CMD ["npm", "run", "start"]
