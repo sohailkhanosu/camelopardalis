@@ -9,21 +9,25 @@ For persistence, this project uses google cloud storage. You will need to get se
 BaseUrl = https://api.hitbtc.com/api/2
 Key = KEY
 Secret = SECRET
+Mock = True
+MinutesToTimeout = 5
 Wrapper = HitBTCExchange
 Strategy = BasicStrategy
-Symbols = ETHBTC,LTCBTC
+Symbols = ETHBTC,LTCBTC,ETCBTC
 
 [bitmex]
 BaseUrl = https://testnet.bitmex.com/api/v1
 Key = KEY
 Secret = SECRET
+Mock = False
+MinutesToTimeout = 60
 Wrapper = BitMEXExchange
-Symbols = XBTUSD
 Strategy = SignalStrategy
-Indicators = RSI,MACD,STOCHRSI
-# market configurations: long_cap,short_cap,bin,long_score,short_score
-XBTUSD = 100,100,1,0,0
-
+Symbols = XBTUSD,XBTJPY
+Indicators = RSI,MACD,STOCHRSI,AROON_OSCILLATOR,MFI,CCI,CMO,MACD_HIST,WILLR
+# market configurations: long_cap,short_cap,bin,long_score,short_score,min_volume
+XBTUSD = 1000,1000,100,.15,-.15,10
+XBTJPY = 1000,1000,100,.15,-.15,10
 ```
 
 ### The easy way:

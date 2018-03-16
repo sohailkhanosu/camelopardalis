@@ -5,6 +5,7 @@ import datetime as dt
 import requests_mock
 import crypto.hitbtc.sample_responses as responses
 from crypto.hitbtc.mock import mock_adapter
+from crypto.structs import *
 
 
 def set_up(mock=True):
@@ -239,56 +240,34 @@ class TestAPIOrder(unittest.TestCase):
         self.e.session.close()
 
 
-class TestTicker(unittest.TestCase):
-    def setUp(self):
-        self.e = set_up(mock=False)
-
-    def test_ticker(self):
-        tickers = self.e.ticker()
-        print(tickers)
-
-
-class TestMarketTrades(unittest.TestCase):
-    def setUp(self):
-        self.e = set_up(mock=False)
-
-    def test_market_trades(self):
-        mk = Market('ETH', 'BTC', 'ETHBTC')
-        trades = self.e.market_trades(mk)
-        print(trades)
-
-
-class TestOrders(unittest.TestCase):
-    def setUp(self):
-        self.e = set_up(mock=False)
-
-    def test_orders(self):
-        orders = self.e.orders()
-        print(orders)
-
-
 class TestBid(unittest.TestCase):
     def setUp(self):
         self.e = set_up(mock=False)
-        self.sample = responses.bid_res
 
     def test_bid(self):
-        mk = Market('ETH', 'BTC', 'ETHBTC')
+        mk = Market('ETC', 'BTC', 'ETCBTC', .001, 0, 0)
         order = self.e.bid(mk, rate=.0001, quantity=.001)
-        print(order)
-        self.e._orders_cancel('ETHBTC')
+        print(vars(order))
+        self.assertTrue(isinstance(order, Order))
+        self.e._orders_cancel('ETCBTC')
+
+    def tearDown(self):
+        self.e.session.close()
 
 
-@unittest.skip('')
 class TestAsk(unittest.TestCase):
     def setUp(self):
-        self.e = set_up(mock=True)
-        self.sample = responses.ask_res
+        self.e = set_up(mock=False)
 
     def test_ask(self):
-        mk = Market('ETH', 'BTC', 'ETHBTC')
-        order = self.e.ask(mk, rate=0, quantity=0)
-        print(order)
+        mk = Market('ETC', 'BTC', 'ETCBTC', .001, 0, 0)
+        order = self.e.ask(mk, rate=100, quantity=.001)
+        # print(vars(order))
+        self.assertTrue(isinstance(order, Order))
+        self.e._orders_cancel('ETCBTC')
+
+    def tearDown(self):
+        self.e.session.close()
 
 
 class TestCancel(unittest.TestCase):
@@ -298,22 +277,49 @@ class TestCancel(unittest.TestCase):
 
     def test_cancel_by_id(self):
         try:
-            mk = Market('ETH', 'BTC', 'ETHBTC')
+            mk = Market('ETC', 'BTC', 'ETCBTC', .001, 0, 0)
             order = self.e.bid(mk, rate=.0001, quantity=.001)
-            print(order)
+            # print(order)
             cancelled = self.e.cancel(order_id=order.order_id)
-            print(cancelled)
+            self.assertTrue(isinstance(cancelled, list))
+            self.assertTrue(isinstance(cancelled[0], Order))
+            # print(cancelled)
         finally:
             self.e.cancel(all=True)
 
     def test_cancel_by_market(self):
-        mk = Market('ETH', 'BTC', 'ETHBTC')
+        mk = Market('ETC', 'BTC', 'ETCBTC', .001, 0, 0)
+        self.e.bid(mk, rate=.0001, quantity=.001)
         cancelled = self.e.cancel(market=mk)
-        print(cancelled)
+        self.assertTrue(isinstance(cancelled, list))
+        self.assertTrue(isinstance(cancelled[0], Order))
+        # print(cancelled)
 
     def test_cancel_all(self):
+        mk = Market('ETC', 'BTC', 'ETCBTC', .001, 0, 0)
+        self.e.bid(mk, rate=.0001, quantity=.001)
         cancelled = self.e.cancel(all=True)
-        print(cancelled)
+        self.assertTrue(isinstance(cancelled[0], Order))
+        # print(cancelled)
+
+    def tearDown(self):
+        self.e.session.close()
+
+
+class TestOrders(unittest.TestCase):
+    def setUp(self):
+        self.e = set_up(mock=False)
+
+    def test_orders(self):
+        mk = Market('ETC', 'BTC', 'ETCBTC', .001, 0, 0)
+        self.e.bid(mk, rate=.0001, quantity=.001)
+        orders = self.e.orders(mk)
+        self.assertTrue(isinstance(orders, list))
+        self.assertTrue(isinstance(orders[0], Order))
+        # print(cancelled)
+
+    def tearDown(self):
+        self.e.session.close()
 
 
 class TestBalance(unittest.TestCase):
@@ -323,7 +329,12 @@ class TestBalance(unittest.TestCase):
 
     def test_balance(self):
         balances = self.e.balance()
-        print(vars(balances['BTC']))
+        # print(balances)
+        self.assertIn("BTC", balances.keys())
+        self.assertTrue(isinstance(balances['BTC'], Balance))
+
+    def tearDown(self):
+        self.e.session.close()
 
 
 class TestOrderBook(unittest.TestCase):
@@ -332,10 +343,41 @@ class TestOrderBook(unittest.TestCase):
         self.sample = responses.orderbook_res
 
     def test_balance(self):
-        mk = Market('ETH', 'BTC', 'ETHBTC')
+        mk = Market('ETC', 'BTC', 'ETCBTC', .001, 0, 0)
         orderbook = self.e.order_book(mk)
-        print(vars(orderbook.asks[0]))
+        # print(vars(orderbook.asks[0]))
+        self.assertTrue(isinstance(orderbook, OrderBook))
 
+    def tearDown(self):
+        self.e.session.close()
+
+
+class TestTicker(unittest.TestCase):
+    def setUp(self):
+        self.e = set_up(mock=False)
+
+    def test_ticker(self):
+        mk = Market('ETC', 'BTC', 'ETCBTC', .001, 0, 0)
+        ticker = self.e.ticker(mk)
+        self.assertTrue(isinstance(ticker, Ticker))
+
+    def tearDown(self):
+        self.e.session.close()
+
+
+class TestCandles(unittest.TestCase):
+    def setUp(self):
+        self.e = set_up(mock=False)
+
+    def test_candles(self):
+        mk = Market('ETC', 'BTC', 'ETCBTC', .001, 0, 0)
+        candles = self.e.candles(mk)
+        # print(candles)
+        self.assertTrue(isinstance(candles, list))
+        self.assertTrue(isinstance(candles[0], Candle))
+
+    def tearDown(self):
+        self.e.session.close()
 # #
 # if __name__ == '__main__':
 #     unittest.main()

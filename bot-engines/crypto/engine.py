@@ -10,17 +10,21 @@ import os
 import logging
 import signal
 import sys
+import csv
 
 
 class TradingBot(object):
-    def __init__(self, name, exchange=None, strategy=None, config_path=None, mock=True):
+    def __init__(self, name, exchange=None, strategy=None, config_path=None, mock=None):
         if config_path:
             try:
                 config = configparser.ConfigParser(allow_no_value=True)
                 fname = os.path.join(os.path.dirname(__file__), 'config.ini')
                 config.read(fname)
+                if mock is None:
+                    mock = config[name].getboolean('Mock', fallback=True)
                 wrapper_class = str_to_class(config[name]['Wrapper'])
                 strategy_class = str_to_class(config[name]['Strategy'])
+                self.minutes_to_timeout = int(config[name]['MinutesToTimeout'])
                 symbols = config[name]['Symbols'].split(',')
                 exchange = wrapper_class(config[name]['BaseUrl'], config[name]['Key'], config[name]['Secret'],
                                          symbols, mock)
@@ -44,7 +48,7 @@ class TradingBot(object):
         self.msg_queue = Queue(maxsize=10)
         self.turn_off = threading.Event()
         self.work_thread = None
-        self.end_time = time.time() + (60 * 5)  # 5 minute timeout
+        self.end_time = time.time() + (60 * self.minutes_to_timeout)
         signal.signal(signal.SIGINT, self.sig_handler)
 
     def run(self):
@@ -147,7 +151,12 @@ class TradingBot(object):
             'data': data,
             'nonce': ''.join([str(random.randint(0, 9)) for _ in range(10)])
         }
-        print(json.dumps(payload, default=serialize_obj), flush=True)
+        msg = json.dumps(payload, default=serialize_obj)
+
+        if len(msg) < 200000:
+            print(msg, flush=True)
+        else:
+            logging.info("Payload too long")
 
     def input_with_timeout(self, timeout):
         # set signal handler
@@ -204,10 +213,6 @@ class Exchange(abc.ABC):
 
     @abc.abstractmethod
     def ticker(self, market=None):
-        pass
-
-    @abc.abstractmethod
-    def market_trades(self, market):
         pass
 
     @abc.abstractmethod
