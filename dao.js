@@ -29,6 +29,8 @@ class ExchangeCollectionDAO {
             let rv = {};
             rv.data = {};
             Object.keys(this.store).forEach(exchangeId => {
+                if (exchangeId[0] === '_')
+                    return;
                 rv.data[exchangeId] = {};
                 rv.data[exchangeId].markets = Object.assign({}, this.store[exchangeId].markets);
                 rv.data[exchangeId].strategy = this.store[exchangeId].strategy;
