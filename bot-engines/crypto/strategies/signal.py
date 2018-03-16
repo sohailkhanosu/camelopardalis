@@ -121,6 +121,8 @@ class SignalStrategy(Strategy):
         return book.bids[0].rate + ((book.asks[0].rate - book.bids[0].rate) / 2)
 
 
+# For more information about this technical indicator and the source of the scan conditions, see:
+# http://stockcharts.com/school/doku.php?id=chart_school:technical_indicators:moving_average_convergence_divergence_macd
 def MACD(inputs):
     Result = namedtuple('Result', 'close, sma, macd, signal, macd_last')
 
@@ -145,6 +147,8 @@ def MACD(inputs):
     return indicator
 
 
+# For more information about this technical indicator and the source of the scan conditions, see:
+# http://stockcharts.com/school/doku.php?id=chart_school:technical_indicators:williams_r
 def RSI(inputs):
     Result = namedtuple('Result', 'close, sma, rsi')
     calculate_sma = abstract.Function("SMA")
@@ -166,6 +170,8 @@ def RSI(inputs):
     return indicator
 
 
+# For more information about this technical indicator and the source of the scan conditions, see:
+# http://stockcharts.com/school/doku.php?id=chart_school:technical_indicators:stochastic_oscillator_fast_slow_and_full
 def STOCHRSI(inputs):
     Result = namedtuple('Result', 'close, sma_10, sma_60, stoch_rsi')
     calculate_sma = abstract.Function("SMA")
@@ -189,6 +195,8 @@ def STOCHRSI(inputs):
     return indicator
 
 
+# For more information about this technical indicator and the source of the scan conditions, see:
+# http://stockcharts.com/school/doku.php?id=chart_school:technical_indicators:aroon_oscillator
 def AROON_OSCILLATOR(inputs):
     Result = namedtuple('Result', 'aroon_last, aroon, sma_volume, volume')
 
@@ -213,6 +221,8 @@ def AROON_OSCILLATOR(inputs):
     return indicator
 
 
+# For more information about this technical indicator and the source of the scan conditions, see:
+# http://stockcharts.com/school/doku.php?id=chart_school:technical_indicators:money_flow_index_mfi
 def MFI(inputs):
     calculate_mfi = abstract.Function("MFI")
     mfi = calculate_mfi(inputs)[-1]
@@ -225,6 +235,8 @@ def MFI(inputs):
     return indicator
 
 
+# For more information about this technical indicator and the source of the scan conditions, see:
+# http://stockcharts.com/school/doku.php?id=chart_school:technical_indicators:commodity_channel_index_cci
 def CCI(inputs):
     Result = namedtuple('Result', 'close, sma, cci, cci_last')
 
@@ -249,6 +261,8 @@ def CCI(inputs):
     return indicator
 
 
+# For more information about this technical indicator and the source of the scan conditions, see:
+# https://www.investopedia.com/terms/c/chandemomentumoscillator.asp
 def CMO(inputs):
     Result = namedtuple('Result', 'cmf, cmf_last, rsi')
 
@@ -272,6 +286,8 @@ def CMO(inputs):
     return indicator
 
 
+# For more information about this technical indicator and the source of the scan conditions, see:
+# http://stockcharts.com/school/doku.php?id=chart_school:technical_indicators:macd-histogram
 def MACD_HIST(inputs):
     Result = namedtuple('Result', 'close, sma, macd_hist, macd_hist_last, macd_line')
 
@@ -296,6 +312,8 @@ def MACD_HIST(inputs):
     return indicator
 
 
+# For more information about this technical indicator and the source of the scan conditions, see:
+# http://stockcharts.com/school/doku.php?id=chart_school:technical_indicators:williams_r
 def WILLR(inputs):
     inputs_20_days_ago = {
         'open': inputs['open'][:-20],
