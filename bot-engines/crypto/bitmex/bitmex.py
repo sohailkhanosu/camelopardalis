@@ -312,8 +312,8 @@ class BitMEXExchange(Exchange):
         except:
             time.sleep(5)
 
-
-if __name__ == "__main__":
+#
+# if __name__ == "__main__":
     # config = configparser.ConfigParser(allow_no_value=True)
     # config.read("../config.ini")
     # b = BitMEXExchange(config["bitmex"]['BaseUrl'], config['bitmex']['Key'], config['bitmex']['Secret'],
