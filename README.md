@@ -21,8 +21,8 @@ LTCBTC = .016
 
 [bitmex]
 BaseUrl = https://testnet.bitmex.com/api/v1
-Key = E_5zqwA8lVold173uCVeUDiC
-Secret = OAR3KepUl26c7n-dwlzFclJJ-hq1hW3ZAep3JVrpPhoZCrm5
+Key = KEY
+Secret = SECRET
 Mock = False
 MinutesToTimeout = 60
 Wrapper = BitMEXExchange
