@@ -34,45 +34,51 @@ function getObjectToDump(store) {
 }
 
 
-class ObjectStore {
-    constructor() {
-
-        /* try loading from google cloud storage */
-        let startPromise;
-        if (config.useCloudStorage) {
-            startPromise = downloadFileFromGCS(config.dumpFile, path.join(__dirname, config.dumpFile));
-        } else {
-            startPromise = Promise.resolve();
+function ObjectStore() {
+    /* try loading from google cloud storage */
+    let startPromise;
+    if (config.useCloudStorage) {
+        startPromise = downloadFileFromGCS(config.dumpFile, path.join(__dirname, config.dumpFile));
+    } else {
+        startPromise = Promise.resolve();
+    }
+    
+    let self = this;
+    /* load the data file if it exists, else just return */
+    startPromise.then(() => {
+        try {
+            let data = fs.readFileSync(config.dumpFile, 'utf-8');
+            return Promise.resolve(data);
+        } catch (err) {
+            Promise.reject(err);
         }
-
-        /* load the data file if it exists, else just return */
-        startPromise.then(() => {
-            try {
-                let data = fs.readFileSync(config.dumpFile, 'utf-8');
-                return Promise.resolve(data);
-            } catch (err) {
-                Promise.reject(err);
+    })
+        .then(contents=> {
+            let dataToLoad = JSON.parse(contents);
+            for (var prop in dataToLoad) {
+                if (this.hasOwnProperty(prop)) {
+                    Object.assign(this[prop], dataToLoad[prop]);
+                } else {
+                    this[prop] = dataToLoad[prop];
+                }
             }
         })
-            .then(contents=> Object.assign(this, JSON.parse(contents)))
-            .catch(err => console.log('no dump file found, it will be created now'))
-            .then(() => {
-                /* then setup regular file backups at specified interval */
-                this._dumpLoop = setInterval(() => {
-                    let objectToDump = getObjectToDump(this);
-                    promisify(fs.writeFile)(config.dumpFile, JSON.stringify(objectToDump), 'utf-8')
-                        .catch(err => 'unable to write to ' + config.dumpFile)
-                        .then(() => {
-                            /* try to save to google cloud */
-                            if (config.useCloudStorage) {
-                                uploadFileToGCS(config.dumpFile);
-                            }
-                        });
-                }, config.dumpInterval);
-            });
-    }
+        .catch(err => console.log('no dump file found, it will be created now'))
+        .then(() => {
+            /* then setup regular file backups at specified interval */
+            this._dumpLoop = setInterval(() => {
+                let objectToDump = getObjectToDump(self);
+                promisify(fs.writeFile)(config.dumpFile, JSON.stringify(objectToDump), 'utf-8')
+                    .catch(err => 'unable to write to ' + config.dumpFile)
+                    .then(() => {
+                        /* try to save to google cloud */
+                        if (config.useCloudStorage) {
+                            uploadFileToGCS(config.dumpFile);
+                        }
+                    });
+            }, config.dumpInterval);
+        });
 }
 
 let store = new ObjectStore();
-
 module.exports = store;
