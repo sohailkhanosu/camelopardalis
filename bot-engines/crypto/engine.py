@@ -153,7 +153,7 @@ class TradingBot(object):
             'nonce': ''.join([str(random.randint(0, 9)) for _ in range(10)])
         }
         msg = json.dumps(payload, default=serialize_obj)
-        requests.post('http://localhost:{}/update'.format(os.environ['PORT']), data=msg)
+        requests.post('http://localhost:{}/update'.format(os.environ['PORT']), data=msg, headers={'content-type': 'application/json'})
 
     def input_with_timeout(self, timeout):
         # set signal handler
