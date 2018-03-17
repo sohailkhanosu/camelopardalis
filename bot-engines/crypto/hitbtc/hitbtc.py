@@ -62,7 +62,7 @@ class HitBTCExchange(Exchange):
         try:
             status, data = self._trading_balance()
             if status == 200:
-                return {d['currency']: Balance(d['available'], d['reserved']) for d in data}
+                return {d['currency']: Balance(d['available'], d['reserved']) for d in data if (float(d['available']) + float(d['reserved'])) > 0}
             else:
                 raise Exception(data['error']['message'])
         except Exception as e:
