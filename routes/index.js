@@ -29,7 +29,7 @@ router.post('/state', function(req, res, next) {
 });
 
 router.post('/update', function(req, res, next) {
-    let message = req.body.data;
+    let message = req.body;
     /* TODO: temporary message processing code;
      * its fine after pass-through but switch statement here
      * should be replaced with a function */
@@ -56,6 +56,7 @@ router.post('/update', function(req, res, next) {
             bs.daos.exchangeDAO.updateSignals(message.exchange, message.data);
             break;
     }
+    res.send('');
 });
 
 router.get('/exchanges/:exchangeId', function(req, res, next) {
