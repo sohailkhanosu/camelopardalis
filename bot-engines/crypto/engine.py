@@ -1,6 +1,6 @@
 import configparser
 import abc
-from .helpers import str_to_class, serialize_obj
+from .helpers import str_to_class, serialize_obj, print_json
 import json
 import random
 from queue import Queue
@@ -11,6 +11,8 @@ import logging
 import signal
 import sys
 import csv
+import requests
+
 
 
 class TradingBot(object):
@@ -151,11 +153,7 @@ class TradingBot(object):
             'nonce': ''.join([str(random.randint(0, 9)) for _ in range(10)])
         }
         msg = json.dumps(payload, default=serialize_obj)
-
-        if len(msg) < 20000:
-            print(msg, flush=True)
-        else:
-            logging.info("Payload too long")
+        requests.post('http://localhost/update:{}'.format(os.environ['PORT']), data=msg)
 
     def input_with_timeout(self, timeout):
         # set signal handler
