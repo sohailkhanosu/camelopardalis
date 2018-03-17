@@ -28,7 +28,7 @@ function getObjectToDump(store) {
     Object.keys(store).forEach(key=> {
         if (key[0] === '_')
             return;
-        dataToDump[key] = store[key];
+        dataToDump[key] = {trades: store[key].trades, balances: store[key].balances};
     });
     return dataToDump;
 }
@@ -46,7 +46,14 @@ class ObjectStore {
         }
 
         /* load the data file if it exists, else just return */
-        startPromise.then(() => promisify(fs.readFile)(config.dumpFile, 'utf-8'))
+        startPromise.then(() => {
+            try {
+                let data = fs.readFileSync(config.dumpFile, 'utf-8');
+                return Promise.resolve(data);
+            } catch (err) {
+                Promise.reject(err);
+            }
+        })
             .then(contents=> Object.assign(this, JSON.parse(contents)))
             .catch(err => console.log('no dump file found, it will be created now'))
             .then(() => {

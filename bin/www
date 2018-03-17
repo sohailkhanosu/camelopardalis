@@ -33,7 +33,7 @@ server.on('listening', onListening);
 /**
  * enable websocket connections
  */
-registerWSS(server);
+//registerWSS(server);
 
 /**
  * Normalize a port into a number, string, or false.
@@ -79,6 +79,7 @@ function onError(error) {
       process.exit(1);
       break;
     default:
+      console.log('unhandled error: ', error);
       throw error;
   }
 }

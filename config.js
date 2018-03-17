@@ -5,5 +5,5 @@ module.exports = {
     heartBeatInterval: 5000,
     dumpFile: 'state-dump.json',
     dumpInterval: 60 * 1000,     /* in milliseconds */
-    useCloudStorage: false        /* enable fetch/store from cloud storage */
+    useCloudStorage: true        /* enable fetch/store from cloud storage */
 }

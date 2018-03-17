@@ -74,32 +74,6 @@ function initBot(spawner, botDirectory, scriptPath) {
             botInstance.fd.emit(`${botInstance.id}-pong`, message)
         }
 
-        /* TODO: temporary message processing code;
-         * its fine after pass-through but switch statement here
-         * should be replaced with a function */
-        switch (message.type) {
-            case 'status':
-                spawner.daos.exchangeDAO.updateExchange(message.exchange, message.data);
-                break;
-            case 'balance':
-                spawner.daos.exchangeDAO.updateBalances(message.exchange, message.data);
-                break;
-            case 'active_orders':
-                spawner.daos.exchangeDAO.updateOrders(message.exchange, message.data);
-                break;
-            case 'trades':
-                spawner.daos.exchangeDAO.updateTrades(message.exchange, message.data);
-                break;
-            case 'orderbooks':
-                spawner.daos.exchangeDAO.updateOrderBooks(message.exchange, message.data);
-                break;
-            case 'positions':
-                spawner.daos.exchangeDAO.updatePositions(message.exchange, message.data);
-                break;
-            case 'signals':
-                spawner.daos.exchangeDAO.updateSignals(message.exchange, message.data);
-                break;
-        }
     });
     botInstance.fd.on('error', function (message) {
         console.error('stream error', message);
